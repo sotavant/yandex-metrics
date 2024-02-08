@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/sotavant/yandex-metrics/internal"
 	"net/http"
 )
 
@@ -17,7 +16,7 @@ func defaultHandler(res http.ResponseWriter, req *http.Request) {
 
 func main() {
 	mux := http.NewServeMux()
-	mem := internal.NewMemStorage()
+	mem := NewMemStorage()
 
 	mux.HandleFunc("/update/gauge/", handleGauge(mem))
 	mux.HandleFunc("/update/counter/", handleCounter(mem))
