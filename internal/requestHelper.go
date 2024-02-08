@@ -27,6 +27,7 @@ func RequestCheck(res http.ResponseWriter, req *http.Request, contentType string
 	return true
 }
 
-func parseUrl(url string) {
-
+func ParseUrl(url string) (string, string) {
+	s := strings.Split(url, `/`)
+	return s[3], s[4]
 }
