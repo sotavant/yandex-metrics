@@ -15,11 +15,7 @@ func (m *MemStorage) AddGaugeValue(key string, value float64) {
 }
 
 func (m *MemStorage) AddCounterValue(key string, value int64) {
-	if _, ok := m.Counter[key]; ok {
-		m.Counter[key] += value
-	} else {
-		m.Counter[key] = value
-	}
+	m.Counter[key] += value
 }
 
 func NewMemStorage() *MemStorage {

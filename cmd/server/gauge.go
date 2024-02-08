@@ -13,7 +13,7 @@ func handleGauge(storage internal.Storage) func(res http.ResponseWriter, req *ht
 			return
 		}
 
-		key, value := internal.ParseUrl(req.RequestURI)
+		key, value := internal.ParseURL(req.RequestURI)
 		floatVal, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
 		if err != nil {
 			http.Error(res, "bad request", http.StatusBadRequest)

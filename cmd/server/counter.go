@@ -13,7 +13,7 @@ func handleCounter(storage internal.Storage) func(res http.ResponseWriter, req *
 			return
 		}
 
-		key, value := internal.ParseUrl(req.RequestURI)
+		key, value := internal.ParseURL(req.RequestURI)
 		intVal, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 		if err != nil {
 			http.Error(res, "bad request", http.StatusBadRequest)

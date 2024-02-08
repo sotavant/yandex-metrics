@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var correctUrlPathCount int = 5
+var correctURLPathCount int = 5
 
 func RequestCheck(res http.ResponseWriter, req *http.Request, contentType string) bool {
 	if req.Method != http.MethodPost {
@@ -19,7 +19,7 @@ func RequestCheck(res http.ResponseWriter, req *http.Request, contentType string
 	}*/
 
 	s := strings.Split(req.RequestURI, `/`)
-	if len(s) != correctUrlPathCount {
+	if len(s) != correctURLPathCount {
 		http.Error(res, "not found", http.StatusNotFound)
 		return false
 	}
@@ -27,7 +27,7 @@ func RequestCheck(res http.ResponseWriter, req *http.Request, contentType string
 	return true
 }
 
-func ParseUrl(url string) (string, string) {
+func ParseURL(url string) (string, string) {
 	s := strings.Split(url, `/`)
 	return s[3], s[4]
 }
