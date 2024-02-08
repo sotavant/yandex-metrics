@@ -13,10 +13,10 @@ func RequestCheck(res http.ResponseWriter, req *http.Request, contentType string
 		return false
 	}
 
-	if req.Header.Get(`Content-Type`) != contentType {
+	/*	if req.Header.Get(`Content-Type`) != contentType {
 		http.Error(res, "bad content-type", http.StatusBadRequest)
 		return false
-	}
+	}*/
 
 	s := strings.Split(req.RequestURI, `/`)
 	if len(s) != correctUrlPathCount {
