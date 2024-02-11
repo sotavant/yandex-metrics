@@ -1,29 +1,23 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
-var contentType string = `text/plain`
-
-func badTypeHandler(res http.ResponseWriter, req *http.Request) {
-	http.Error(res, "bad request", http.StatusBadRequest)
-}
-
-func defaultHandler(res http.ResponseWriter, req *http.Request) {
-	http.Error(res, "not found", http.StatusNotFound)
-}
+const contentType string = `text/plain`
+const gaugeType = "gauge"
+const counterType = "counter"
 
 func main() {
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
 	mem := NewMemStorage()
 
-	mux.HandleFunc("/update/gauge/", handleGauge(mem))
-	mux.HandleFunc("/update/counter/", handleCounter(mem))
-	mux.HandleFunc(`/update/`, badTypeHandler)
-	mux.HandleFunc(`/`, defaultHandler)
+	r.Post("/update/{type}/{name}/{value}", updateHandler(mem))
+	r.Get("/value/{type}/{name}", getValueHandler(mem))
+	r.Get("/", getValuesHandler(mem))
 
-	err := http.ListenAndServe(`:8080`, mux)
+	err := http.ListenAndServe(`:8080`, r)
 	if err != nil {
 		panic(err)
 	}

@@ -12,6 +12,8 @@ func Test_badTypeHandler(t *testing.T) {
 		responseStatus int
 	}
 
+	storage := NewMemStorage()
+
 	tests := []struct {
 		name    string
 		request string
@@ -29,42 +31,13 @@ func Test_badTypeHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
-			badTypeHandler(w, request)
-
-			res := w.Result()
+			h := http.HandlerFunc(updateHandler(storage))
+			h(w, request)
+			result := w.Result()
 			defer func() {
-				err := res.Body.Close()
+				err := result.Body.Close()
 				assert.NoError(t, err)
 			}()
-			assert.Equal(t, tt.wants.responseStatus, res.StatusCode)
-		})
-	}
-}
-
-func Test_defaultHandler(t *testing.T) {
-	type wants struct {
-		responseStatus int
-	}
-
-	tests := []struct {
-		name    string
-		request string
-		wants   wants
-	}{
-		{
-			name:    `badPoint`,
-			request: `/updatesd/badType/asdf/sdff`,
-			wants: wants{
-				responseStatus: http.StatusNotFound,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
-			w := httptest.NewRecorder()
-
-			defaultHandler(w, request)
 
 			res := w.Result()
 			defer func() {

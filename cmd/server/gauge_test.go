@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -18,10 +20,14 @@ func Test_handleGauge(t *testing.T) {
 		request string
 		storage *MemStorage
 		want    want
+		mName   string
+		mValue  string
 	}{
 		{
 			name:    `newValue`,
 			request: `/update/gauge/newValue/1`,
+			mName:   `newValue`,
+			mValue:  `1`,
 			storage: NewMemStorage(),
 			want: struct {
 				contentType int
@@ -31,6 +37,8 @@ func Test_handleGauge(t *testing.T) {
 		{
 			name:    `updateValue`,
 			request: `/update/gauge/updateValue/3`,
+			mName:   `updateValue`,
+			mValue:  `3`,
 			storage: NewMemStorage(),
 			want: struct {
 				contentType int
@@ -40,6 +48,8 @@ func Test_handleGauge(t *testing.T) {
 		{
 			name:    `badValue`,
 			request: `/update/gauge/badValue/sdfsdfsdf`,
+			mName:   `badValue`,
+			mValue:  `sdfsdfsdf`,
 			storage: NewMemStorage(),
 			want: struct {
 				contentType int
@@ -51,7 +61,15 @@ func Test_handleGauge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(handleGauge(tt.storage))
+
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add(`type`, gaugeType)
+			rctx.URLParams.Add(`name`, tt.mName)
+			rctx.URLParams.Add(`value`, tt.mValue)
+
+			request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
+			h := http.HandlerFunc(updateHandler(tt.storage))
 			h(w, request)
 			result := w.Result()
 			defer func() {
