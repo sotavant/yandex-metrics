@@ -54,6 +54,10 @@ func Test_handleGauge(t *testing.T) {
 			h := http.HandlerFunc(handleGauge(tt.storage))
 			h(w, request)
 			result := w.Result()
+			defer func() {
+				err := result.Body.Close()
+				assert.NoError(t, err)
+			}()
 
 			switch tt.name {
 			case `updateValue`:

@@ -34,8 +34,15 @@ func sendCounter(ms *MetricsStorage) {
 
 func sendRequest(mType, name, value string) {
 	url := getURL(mType, name, value)
+	resp, err := http.Post(url, `text/plain`, nil)
 
-	_, err := http.Post(url, `text/plain`, nil)
+	defer func() {
+		err = resp.Body.Close()
+		if err != nil {
+			fmt.Println(fmt.Errorf("error in %s close body: %v", mType, err))
+		}
+	}()
+
 	if err != nil {
 		fmt.Println(fmt.Errorf("error in %s request: %v", mType, err))
 	}

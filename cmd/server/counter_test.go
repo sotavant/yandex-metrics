@@ -45,6 +45,10 @@ func Test_handleCounter(t *testing.T) {
 			h := http.HandlerFunc(handleCounter(tt.storage))
 			h(w, request)
 			result := w.Result()
+			defer func() {
+				err := result.Body.Close()
+				assert.NoError(t, err)
+			}()
 
 			switch tt.name {
 			case `newValue`:

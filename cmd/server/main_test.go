@@ -32,6 +32,10 @@ func Test_badTypeHandler(t *testing.T) {
 			badTypeHandler(w, request)
 
 			res := w.Result()
+			defer func() {
+				err := res.Body.Close()
+				assert.NoError(t, err)
+			}()
 			assert.Equal(t, tt.wants.responseStatus, res.StatusCode)
 		})
 	}
@@ -63,6 +67,10 @@ func Test_defaultHandler(t *testing.T) {
 			defaultHandler(w, request)
 
 			res := w.Result()
+			defer func() {
+				err := res.Body.Close()
+				assert.NoError(t, err)
+			}()
 			assert.Equal(t, tt.wants.responseStatus, res.StatusCode)
 		})
 	}
