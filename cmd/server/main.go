@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-const contentType string = `text/plain`
+// const contentType string = `text/plain`
 const gaugeType = "gauge"
 const counterType = "counter"
 

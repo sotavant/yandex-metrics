@@ -44,7 +44,6 @@ func getValueHandler(storage Storage) func(w http.ResponseWriter, req *http.Requ
 		mType := chi.URLParam(req, "type")
 		mName := chi.URLParam(req, "name")
 
-		fmt.Println(mType, mName)
 		if mType != gaugeType && mType != counterType {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -83,7 +82,7 @@ func getValuesHandler(storage Storage) func(w http.ResponseWriter, req *http.Req
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf8")
-		_, err := fmt.Fprintf(w, resp)
+		_, err := fmt.Fprint(w, resp)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
