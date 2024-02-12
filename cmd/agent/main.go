@@ -10,12 +10,13 @@ const (
 	serverAddress  = `localhost:8080`
 )
 
-func main() {
-	config := new(config)
-	config.parseFlags()
+var Config = new(config)
 
-	var poolIntervalDuration = time.Duration(config.pollInterval) * time.Second
-	var reportIntervalDuration = time.Duration(config.reportInterval) * time.Second
+func main() {
+	Config.parseFlags()
+
+	var poolIntervalDuration = time.Duration(Config.pollInterval) * time.Second
+	var reportIntervalDuration = time.Duration(Config.reportInterval) * time.Second
 	ms := NewStorage()
 	forever1 := make(chan bool)
 	forever2 := make(chan bool)
@@ -39,7 +40,7 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				reportMetric(ms, *config)
+				reportMetric(ms)
 			}
 		}
 	}()
