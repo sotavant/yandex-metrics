@@ -5,19 +5,25 @@ import (
 	"net/http"
 )
 
-// const contentType string = `text/plain`
-const gaugeType = "gauge"
-const counterType = "counter"
+const (
+	// const contentType string = `text/plain`
+	gaugeType     = "gauge"
+	counterType   = "counter"
+	serverAddress = "localhost:8080"
+)
 
 func main() {
 	r := chi.NewRouter()
 	mem := NewMemStorage()
+	config := new(config)
+
+	config.parseFlags()
 
 	r.Post("/update/{type}/{name}/{value}", updateHandler(mem))
 	r.Get("/value/{type}/{name}", getValueHandler(mem))
 	r.Get("/", getValuesHandler(mem))
 
-	err := http.ListenAndServe(`:8080`, r)
+	err := http.ListenAndServe(config.addr, r)
 	if err != nil {
 		panic(err)
 	}

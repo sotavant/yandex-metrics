@@ -5,14 +5,17 @@ import (
 )
 
 const (
-	poolInterval   = 2
+	pollInterval   = 2
 	reportInterval = 10
-	serverAddress  = `http://localhost:8080`
+	serverAddress  = `localhost:8080`
 )
 
 func main() {
-	var poolIntervalDuration = time.Duration(poolInterval) * time.Second
-	var reportIntervalDuration = time.Duration(reportInterval) * time.Second
+	config := new(config)
+	config.parseFlags()
+
+	var poolIntervalDuration = time.Duration(config.pollInterval) * time.Second
+	var reportIntervalDuration = time.Duration(config.reportInterval) * time.Second
 	ms := NewStorage()
 	forever1 := make(chan bool)
 	forever2 := make(chan bool)
@@ -36,7 +39,7 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				reportMetric(ms)
+				reportMetric(ms, *config)
 			}
 		}
 	}()
