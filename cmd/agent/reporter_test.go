@@ -28,7 +28,9 @@ func Test_getURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, getURL(tt.args.mType, tt.args.name, tt.args.value), "getURL(%v, %v, %v)", tt.args.mType, tt.args.name, tt.args.value)
+			conf := new(config)
+			conf.addr = serverAddress
+			assert.Equalf(t, tt.want, getURL(tt.args.mType, tt.args.name, tt.args.value, *conf), "getURL(%v, %v, %v)", tt.args.mType, tt.args.name, tt.args.value)
 		})
 	}
 }
