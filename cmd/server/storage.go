@@ -5,6 +5,9 @@ type Storage interface {
 	AddCounterValue(key string, value int64)
 	GetValue(mType string, key string) interface{}
 	GetGauge() map[string]float64
+	GetCounterValue(key string) int64
+	GetGaugeValue(key string) float64
+	KeyExist(mType string, key string) bool
 }
 
 type MemStorage struct {
@@ -37,8 +40,33 @@ func (m *MemStorage) GetValue(mType, key string) interface{} {
 	return nil
 }
 
+func (m *MemStorage) KeyExist(mType, key string) bool {
+	switch mType {
+	case gaugeType:
+		_, ok := m.Gauge[key]
+		if ok {
+			return true
+		}
+	case counterType:
+		_, ok := m.Counter[key]
+		if ok {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (m *MemStorage) GetGauge() map[string]float64 {
 	return m.Gauge
+}
+
+func (m *MemStorage) GetGaugeValue(key string) float64 {
+	return m.Gauge[key]
+}
+
+func (m *MemStorage) GetCounterValue(key string) int64 {
+	return m.Counter[key]
 }
 
 func NewMemStorage() *MemStorage {
