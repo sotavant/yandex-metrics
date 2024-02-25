@@ -3,14 +3,13 @@ package main
 import (
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"net/http"
-	"time"
 )
 
 func withLogging(h http.HandlerFunc) http.HandlerFunc {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		uri := r.RequestURI
-		method := r.Method
+		//start := time.Now()
+		//uri := r.RequestURI
+		//method := r.Method
 		rData := &server.ResponseData{
 			Status: 0,
 			Size:   0,
@@ -22,20 +21,20 @@ func withLogging(h http.HandlerFunc) http.HandlerFunc {
 
 		h.ServeHTTP(&lw, r)
 
-		duration := time.Since(start)
+		//duration := time.Since(start)
 
-		logger.Infow(
+		/*logger.Infow(
 			"Request info",
 			"uri", uri,
 			"method", method,
 			"duration", duration,
-		)
+		)*/
 
-		logger.Infow(
-			"Response info",
-			"status", rData.Status,
-			"size", rData.Size,
-		)
+		/*		logger.Infow(
+				"Response info",
+				"status", rData.Status,
+				"size", rData.Size,
+			)*/
 	}
 
 	return logFn

@@ -22,6 +22,8 @@ const (
 	lookupsMetric       = "Lookups"
 	mCacheInuseMetric   = "MCacheInuse"
 	mCacheSysMetric     = "MCacheSys"
+	mSpanInUseMetric    = "MSpanInuse"
+	mSpanSysMetric      = "MSpanSys"
 	mallocsMetric       = "Mallocs"
 	nextGCMetric        = "NextGC"
 	numForcedGCMetric   = "NumForcedGC"
@@ -67,6 +69,8 @@ func (m *MetricsStorage) updateValues() {
 	m.Metrics[lookupsMetric] = float64(rtm.Lookups)
 	m.Metrics[mCacheInuseMetric] = float64(rtm.MCacheInuse)
 	m.Metrics[mCacheSysMetric] = float64(rtm.MCacheSys)
+	m.Metrics[mSpanInUseMetric] = float64(rtm.MSpanInuse)
+	m.Metrics[mSpanSysMetric] = float64(rtm.MSpanSys)
 	m.Metrics[mallocsMetric] = float64(rtm.Mallocs)
 	m.Metrics[nextGCMetric] = float64(rtm.NextGC)
 	m.Metrics[numForcedGCMetric] = float64(rtm.NumForcedGC)

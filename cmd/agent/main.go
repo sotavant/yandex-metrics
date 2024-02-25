@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/sotavant/yandex-metrics/internal"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -11,12 +13,14 @@ const (
 )
 
 var Config = new(config)
+var logger zap.SugaredLogger
 
 func main() {
 	Config.parseFlags()
 
 	var poolIntervalDuration = time.Duration(Config.pollInterval) * time.Second
 	var reportIntervalDuration = time.Duration(Config.reportInterval) * time.Second
+	logger = internal.InitLogger()
 	ms := NewStorage()
 	forever1 := make(chan bool)
 	forever2 := make(chan bool)

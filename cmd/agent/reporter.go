@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/go-resty/resty/v2"
-	"strconv"
+	"github.com/sotavant/yandex-metrics/internal"
 )
 
 const (
-	URL             = `%s/update/%s/%s/%s`
+	URL             = `/update/`
 	counterType     = `counter`
 	gaugeType       = `gauge`
-	poolCounterName = `poolCounter`
+	poolCounterName = `PollCount`
 )
 
 func reportMetric(ms *MetricsStorage) {
@@ -18,26 +18,39 @@ func reportMetric(ms *MetricsStorage) {
 	sendCounter(ms)
 }
 
-func getURL(mType, name, value string) string {
-	return fmt.Sprintf(URL, Config.addr, mType, name, value)
-}
-
 func sendGauge(ms *MetricsStorage) {
 	for k, v := range ms.Metrics {
-		sendRequest(gaugeType, k, fmt.Sprintf(`%f`, v))
+		m := internal.Metrics{
+			ID:    k,
+			MType: gaugeType,
+			Value: &v,
+		}
+		sendRequest(m)
 	}
 }
 
 func sendCounter(ms *MetricsStorage) {
-	sendRequest(counterType, poolCounterName, strconv.FormatInt(ms.PollCount, 10))
+	m := internal.Metrics{
+		ID:    poolCounterName,
+		MType: counterType,
+		Delta: &ms.PollCount,
+	}
+	sendRequest(m)
 }
 
-func sendRequest(mType, name, value string) {
-	url := getURL(mType, name, value)
+func sendRequest(metrics internal.Metrics) {
+	jsonData, err := json.Marshal(metrics)
+	if err != nil {
+		logger.Infoln("marshall error", err)
+	}
+
 	client := resty.New()
-	_, err := client.R().Post("http://" + url)
+	_, err = client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(jsonData).
+		Post("http://" + Config.addr + URL)
 
 	if err != nil {
-		fmt.Println(fmt.Errorf("error in %s request: %v", mType, err))
+		logger.Infoln("error in request", err)
 	}
 }
