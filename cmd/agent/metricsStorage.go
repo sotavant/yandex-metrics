@@ -6,6 +6,34 @@ import (
 	"time"
 )
 
+const (
+	allocMetric         = "Alloc"
+	buckHashSysMetric   = "BuckHashSys"
+	freesMetric         = "Frees"
+	gCCPUFractionMetric = "GCCPUFraction"
+	gCSysMetric         = "GCSys"
+	heapAllocMetric     = "HeapAlloc"
+	heapIdleMetric      = "HeapIdle"
+	heapInuseMetric     = "HeapInuse"
+	heapObjectsMetric   = "HeapObjects"
+	heapReleasedMetric  = "HeapReleased"
+	heapSysMetric       = "HeapSys"
+	lastGCMetric        = "LastGC"
+	lookupsMetric       = "Lookups"
+	mCacheInuseMetric   = "MCacheInuse"
+	mCacheSysMetric     = "MCacheSys"
+	mallocsMetric       = "Mallocs"
+	nextGCMetric        = "NextGC"
+	numForcedGCMetric   = "NumForcedGC"
+	numGCMetric         = "NumGC"
+	otherSysMetric      = "OtherSys"
+	pauseTotalNsMetric  = "PauseTotalNs"
+	stackInuseMetric    = "StackInuse"
+	stackSysMetric      = "StackSys"
+	sysMetric           = "Sys"
+	totalAllocMetric    = "TotalAlloc"
+)
+
 type MetricsStorage struct {
 	Metrics   map[string]float64
 	PollCount int64
@@ -24,31 +52,31 @@ func (m *MetricsStorage) updateValues() {
 
 	runtime.ReadMemStats(&rtm)
 
-	m.Metrics["Alloc"] = float64(rtm.Alloc)
-	m.Metrics["BuckHashSys"] = float64(rtm.BuckHashSys)
-	m.Metrics["Frees"] = float64(rtm.Frees)
-	m.Metrics["GCCPUFraction"] = rtm.GCCPUFraction
-	m.Metrics["GCSys"] = float64(rtm.GCSys)
-	m.Metrics["HeapAlloc"] = float64(rtm.HeapAlloc)
-	m.Metrics["HeapIdle"] = float64(rtm.HeapIdle)
-	m.Metrics["HeapInuse"] = float64(rtm.HeapInuse)
-	m.Metrics["HeapObjects"] = float64(rtm.HeapObjects)
-	m.Metrics["HeapReleased"] = float64(rtm.HeapReleased)
-	m.Metrics["HeapSys"] = float64(rtm.HeapSys)
-	m.Metrics["LastGC"] = float64(rtm.LastGC)
-	m.Metrics["Lookups"] = float64(rtm.Lookups)
-	m.Metrics["MCacheInuse"] = float64(rtm.MCacheInuse)
-	m.Metrics["MCacheSys"] = float64(rtm.MCacheSys)
-	m.Metrics["Mallocs"] = float64(rtm.Mallocs)
-	m.Metrics["NextGC"] = float64(rtm.NextGC)
-	m.Metrics["NumForcedGC"] = float64(rtm.NumForcedGC)
-	m.Metrics["NumGC"] = float64(rtm.NumGC)
-	m.Metrics["OtherSys"] = float64(rtm.OtherSys)
-	m.Metrics["PauseTotalNs"] = float64(rtm.PauseTotalNs)
-	m.Metrics["StackInuse"] = float64(rtm.StackInuse)
-	m.Metrics["StackSys"] = float64(rtm.StackSys)
-	m.Metrics["Sys"] = float64(rtm.Sys)
-	m.Metrics["TotalAlloc"] = float64(rtm.TotalAlloc)
+	m.Metrics[allocMetric] = float64(rtm.Alloc)
+	m.Metrics[buckHashSysMetric] = float64(rtm.BuckHashSys)
+	m.Metrics[freesMetric] = float64(rtm.Frees)
+	m.Metrics[gCCPUFractionMetric] = rtm.GCCPUFraction
+	m.Metrics[gCSysMetric] = float64(rtm.GCSys)
+	m.Metrics[heapAllocMetric] = float64(rtm.HeapAlloc)
+	m.Metrics[heapIdleMetric] = float64(rtm.HeapIdle)
+	m.Metrics[heapInuseMetric] = float64(rtm.HeapInuse)
+	m.Metrics[heapObjectsMetric] = float64(rtm.HeapObjects)
+	m.Metrics[heapReleasedMetric] = float64(rtm.HeapReleased)
+	m.Metrics[heapSysMetric] = float64(rtm.HeapSys)
+	m.Metrics[lastGCMetric] = float64(rtm.LastGC)
+	m.Metrics[lookupsMetric] = float64(rtm.Lookups)
+	m.Metrics[mCacheInuseMetric] = float64(rtm.MCacheInuse)
+	m.Metrics[mCacheSysMetric] = float64(rtm.MCacheSys)
+	m.Metrics[mallocsMetric] = float64(rtm.Mallocs)
+	m.Metrics[nextGCMetric] = float64(rtm.NextGC)
+	m.Metrics[numForcedGCMetric] = float64(rtm.NumForcedGC)
+	m.Metrics[numGCMetric] = float64(rtm.NumGC)
+	m.Metrics[otherSysMetric] = float64(rtm.OtherSys)
+	m.Metrics[pauseTotalNsMetric] = float64(rtm.PauseTotalNs)
+	m.Metrics[stackInuseMetric] = float64(rtm.StackInuse)
+	m.Metrics[stackSysMetric] = float64(rtm.StackSys)
+	m.Metrics[sysMetric] = float64(rtm.Sys)
+	m.Metrics[totalAllocMetric] = float64(rtm.TotalAlloc)
 	m.Metrics["RandomValue"] = r.Float64()
 	m.PollCount += 1
 }
