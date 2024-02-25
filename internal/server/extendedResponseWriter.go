@@ -24,5 +24,6 @@ func (r *LoggingResponseWriter) Write(b []byte) (int, error) {
 }
 
 func (r *LoggingResponseWriter) WriteHeader(statusCode int) {
+	r.ResponseWriter.WriteHeader(statusCode)
 	r.ResponseData.Status = statusCode
 }
