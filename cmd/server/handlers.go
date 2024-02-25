@@ -66,6 +66,8 @@ func getValueHandler(storage Storage) func(w http.ResponseWriter, req *http.Requ
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
 		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
