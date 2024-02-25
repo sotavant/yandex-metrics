@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func updateJsonHandler(storage Storage) func(res http.ResponseWriter, req *http.Request) {
+func updateJSONHandler(storage Storage) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 
@@ -53,7 +53,7 @@ func updateJsonHandler(storage Storage) func(res http.ResponseWriter, req *http.
 	}
 }
 
-func getValueJsonHandler(storage Storage) func(res http.ResponseWriter, req *http.Request) {
+func getValueJSONHandler(storage Storage) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 

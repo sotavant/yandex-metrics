@@ -11,7 +11,7 @@ import (
 
 func Test_updateJsonHandler(t *testing.T) {
 	st := NewMemStorage()
-	handler := updateJsonHandler(st)
+	handler := updateJSONHandler(st)
 
 	type want struct {
 		status int
@@ -103,7 +103,7 @@ func Test_getValueJsonHandler(t *testing.T) {
 	st := NewMemStorage()
 	st.AddGaugeValue("ss", -3444)
 	st.AddCounterValue("ss", 3)
-	handler := getValueJsonHandler(st)
+	handler := getValueJSONHandler(st)
 
 	type want struct {
 		status int
