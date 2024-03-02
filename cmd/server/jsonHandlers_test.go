@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -180,4 +183,77 @@ func Test_getValueJsonHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGzipCompression(t *testing.T) {
+	st := NewMemStorage()
+	st.AddGaugeValue("ss", -3444)
+	st.AddCounterValue("ss", 3)
+	requestBody := `{"id":"ss","type":"counter","delta":3}
+`
+	htmlResponse := `<p>ss: -3444</p>`
+
+	t.Run("sends_gzip", func(t *testing.T) {
+		handler := gzipMiddleware(getValueJSONHandler(st))
+
+		buf := bytes.NewBuffer(nil)
+		zb := gzip.NewWriter(buf)
+		_, err := zb.Write([]byte(requestBody))
+		assert.NoError(t, err)
+		err = zb.Close()
+		assert.NoError(t, err)
+
+		r := httptest.NewRequest(http.MethodPost, "/value", buf)
+		r.RequestURI = ""
+		r.Header.Set("Content-Encoding", "gzip")
+		r.Header.Set("Accept-Encoding", "0")
+		r.Header.Set("Accept", "application/json")
+		r.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		handler(w, r)
+		result := w.Result()
+		defer func() {
+			err := result.Body.Close()
+			assert.NoError(t, err)
+		}()
+
+		body, err := io.ReadAll(result.Body)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, result.StatusCode)
+
+		assert.Equal(t, requestBody, string(body))
+
+	})
+
+	t.Run("accept_gzip", func(t *testing.T) {
+		handler := gzipMiddleware(getValuesHandler(st))
+
+		buf := bytes.NewBufferString(requestBody)
+		r := httptest.NewRequest("POST", "/", buf)
+		r.RequestURI = ""
+		r.Header.Set("Accept-Encoding", "gzip")
+		r.Header.Set("Accept", "html/text")
+
+		w := httptest.NewRecorder()
+
+		handler(w, r)
+		result := w.Result()
+		defer func() {
+			err := result.Body.Close()
+			assert.NoError(t, err)
+		}()
+
+		require.Equal(t, http.StatusOK, result.StatusCode)
+
+		zr, err := gzip.NewReader(result.Body)
+		require.NoError(t, err)
+
+		b, err := io.ReadAll(zr)
+		require.NoError(t, err)
+
+		require.Equal(t, htmlResponse, string(b))
+	})
 }

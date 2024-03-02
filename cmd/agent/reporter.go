@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"github.com/go-resty/resty/v2"
 	"github.com/sotavant/yandex-metrics/internal"
@@ -47,10 +49,27 @@ func sendRequest(metrics internal.Metrics) {
 	client := resty.New()
 	_, err = client.R().
 		SetHeader("Content-Type", "application/json").
-		SetBody(jsonData).
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(getCompressedData(jsonData)).
 		Post("http://" + Config.addr + URL)
 
 	if err != nil {
 		logger.Infoln("error in request", err)
 	}
+}
+
+func getCompressedData(data []byte) *bytes.Buffer {
+	buf := bytes.NewBuffer(nil)
+	zb := gzip.NewWriter(buf)
+	_, err := zb.Write(data)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if err := zb.Close(); err != nil {
+		panic(err)
+	}
+
+	return buf
 }

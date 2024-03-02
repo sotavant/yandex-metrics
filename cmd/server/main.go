@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	// const contentType string = `text/plain`
-	gaugeType     = "gauge"
-	counterType   = "counter"
-	serverAddress = "localhost:8080"
+	gaugeType          = "gauge"
+	counterType        = "counter"
+	serverAddress      = "localhost:8080"
+	acceptableEncoding = "gzip"
 )
 
 var logger zap.SugaredLogger
@@ -24,11 +24,11 @@ func main() {
 
 	config.parseFlags()
 
-	r.Post("/update/{type}/{name}/{value}", withLogging(updateHandler(mem)))
-	r.Get("/value/{type}/{name}", withLogging(getValueHandler(mem)))
-	r.Post("/update/", withLogging(updateJSONHandler(mem)))
-	r.Post("/value/", withLogging(getValueJSONHandler(mem)))
-	r.Get("/", withLogging(getValuesHandler(mem)))
+	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(mem))))
+	r.Get("/value/{type}/{name}", withLogging(gzipMiddleware(getValueHandler(mem))))
+	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(mem))))
+	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(mem))))
+	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(mem))))
 
 	err := http.ListenAndServe(config.addr, r)
 	if err != nil {
