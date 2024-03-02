@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func updateJSONHandler(storage Storage) func(res http.ResponseWriter, req *http.Request) {
+func updateJSONHandler(storage Storage, fs *FileStorage) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 
@@ -47,6 +47,14 @@ func updateJSONHandler(storage Storage) func(res http.ResponseWriter, req *http.
 			logger.Infow("error in encode")
 			http.Error(res, "internal server error", http.StatusInternalServerError)
 			return
+		}
+
+		if fs.storeInterval == 0 {
+			if err := fs.Sync(storage); err != nil {
+				logger.Infow("error in sync")
+				http.Error(res, "internal server error", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		res.WriteHeader(http.StatusOK)

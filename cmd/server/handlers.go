@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func updateHandler(storage Storage) func(res http.ResponseWriter, req *http.Request) {
+func updateHandler(storage Storage, fs *FileStorage) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		mType := chi.URLParam(req, "type")
 		mName := chi.URLParam(req, "name")
@@ -32,6 +32,14 @@ func updateHandler(storage Storage) func(res http.ResponseWriter, req *http.Requ
 		default:
 			http.Error(res, "bad request", http.StatusBadRequest)
 			return
+		}
+
+		if fs.storeInterval == 0 {
+			if err := fs.Sync(storage); err != nil {
+				logger.Infow("error in sync")
+				http.Error(res, "internal server error", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		res.WriteHeader(http.StatusOK)

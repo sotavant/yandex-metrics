@@ -13,8 +13,16 @@ import (
 )
 
 func Test_updateJsonHandler(t *testing.T) {
+	conf := config{
+		addr:            "",
+		storeInterval:   0,
+		fileStoragePath: "/tmp/fs_test",
+		restore:         false,
+	}
+	fs, _ := NewFileStorage(conf)
+
 	st := NewMemStorage()
-	handler := updateJSONHandler(st)
+	handler := updateJSONHandler(st, fs)
 
 	type want struct {
 		status int
