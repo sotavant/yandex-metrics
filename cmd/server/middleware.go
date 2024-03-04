@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"net/http"
 	"strings"
@@ -33,14 +34,14 @@ func withLogging(h http.HandlerFunc) http.HandlerFunc {
 
 		duration := time.Since(start)
 
-		logger.Infow(
+		internal.Logger.Infow(
 			"Request info",
 			"uri", uri,
 			"method", method,
 			"duration", duration,
 		)
 
-		logger.Infow(
+		internal.Logger.Infow(
 			"Response info",
 			"status", rData.Status,
 			"size", rData.Size,
@@ -59,7 +60,7 @@ func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			if sendsGzip {
 				cr, err := server.NewCompressReader(r.Body)
 				if err != nil {
-					logger.Infow("compressReaderError", "err", err)
+					internal.Logger.Infow("compressReaderError", "err", err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -67,7 +68,7 @@ func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 				defer func(cr *server.CompressReader) {
 					err := cr.Close()
 					if err != nil {
-						logger.Infow("compressReaderCloseError", "err", err)
+						internal.Logger.Infow("compressReaderCloseError", "err", err)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
@@ -84,7 +85,7 @@ func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 				defer func(cw *server.CompressWriter) {
 					err := cw.Close()
 					if err != nil {
-						logger.Infow("compressWriterCloseError", "err", err)
+						internal.Logger.Infow("compressWriterCloseError", "err", err)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}

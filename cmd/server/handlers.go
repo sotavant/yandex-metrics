@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/sotavant/yandex-metrics/internal"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,7 +37,7 @@ func updateHandler(storage Storage, fs *FileStorage) func(res http.ResponseWrite
 
 		if fs.storeInterval == 0 {
 			if err := fs.Sync(storage); err != nil {
-				logger.Infow("error in sync")
+				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
 			}

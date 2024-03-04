@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
 )
@@ -15,13 +14,10 @@ const (
 	acceptableEncoding = "gzip"
 )
 
-var logger zap.SugaredLogger
-
 func main() {
 	config := new(config)
 	config.parseFlags()
 
-	r := chi.NewRouter()
 	mem := NewMemStorage()
 	fs, err := NewFileStorage(*config)
 	defer func(fs *FileStorage) {
@@ -44,13 +40,9 @@ func main() {
 		panic(err)
 	}
 
-	logger = internal.InitLogger()
+	internal.InitLogger()
 
-	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(mem, fs))))
-	r.Get("/value/{type}/{name}", withLogging(gzipMiddleware(getValueHandler(mem))))
-	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(mem, fs))))
-	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(mem))))
-	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(mem))))
+	r := initRouter(mem, fs)
 
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)
@@ -72,4 +64,16 @@ func main() {
 	}()
 
 	wg.Wait()
+}
+
+func initRouter(mem Storage, fs *FileStorage) *chi.Mux {
+	r := chi.NewRouter()
+
+	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(mem, fs))))
+	r.Get("/value/{type}/{name}", withLogging(gzipMiddleware(getValueHandler(mem))))
+	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(mem, fs))))
+	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(mem))))
+	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(mem))))
+
+	return r
 }

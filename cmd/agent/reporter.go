@@ -43,7 +43,7 @@ func sendCounter(ms *MetricsStorage) {
 func sendRequest(metrics internal.Metrics) {
 	jsonData, err := json.Marshal(metrics)
 	if err != nil {
-		logger.Infoln("marshall error", err)
+		internal.Logger.Infoln("marshall error", err)
 	}
 
 	client := resty.New()
@@ -54,7 +54,7 @@ func sendRequest(metrics internal.Metrics) {
 		Post("http://" + Config.addr + URL)
 
 	if err != nil {
-		logger.Infoln("error in request", err)
+		internal.Logger.Infoln("error in request", err)
 	}
 }
 

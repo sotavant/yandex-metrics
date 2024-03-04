@@ -2,7 +2,9 @@ package internal
 
 import "go.uber.org/zap"
 
-func InitLogger() zap.SugaredLogger {
+var Logger zap.SugaredLogger
+
+func InitLogger() {
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
@@ -10,5 +12,5 @@ func InitLogger() zap.SugaredLogger {
 
 	defer logger.Sync()
 
-	return *logger.Sugar()
+	Logger = *logger.Sugar()
 }

@@ -44,14 +44,14 @@ func updateJSONHandler(storage Storage, fs *FileStorage) func(res http.ResponseW
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(respStruct); err != nil {
-			logger.Infow("error in encode")
+			internal.Logger.Infow("error in encode")
 			http.Error(res, "internal server error", http.StatusInternalServerError)
 			return
 		}
 
 		if fs.storeInterval == 0 {
 			if err := fs.Sync(storage); err != nil {
-				logger.Infow("error in sync")
+				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
 			}
@@ -87,7 +87,7 @@ func getValueJSONHandler(storage Storage) func(res http.ResponseWriter, req *htt
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(respStruct); err != nil {
-			logger.Infow("error in encode")
+			internal.Logger.Infow("error in encode")
 			http.Error(res, "internal server error", http.StatusInternalServerError)
 			return
 		}
