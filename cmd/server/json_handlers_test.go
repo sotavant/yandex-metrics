@@ -19,10 +19,17 @@ func Test_updateJsonHandler(t *testing.T) {
 		fileStoragePath: "/tmp/fs_test",
 		restore:         false,
 	}
-	fs, _ := NewFileStorage(conf)
-
 	st := NewMemStorage()
-	handler := updateJSONHandler(st, fs)
+	fs, err := NewFileStorage(conf)
+	assert.NoError(t, err)
+
+	appInstance := &app{
+		config:     &conf,
+		memStorage: st,
+		fs:         fs,
+	}
+
+	handler := updateJSONHandler(appInstance)
 
 	type want struct {
 		status int
@@ -111,10 +118,15 @@ func Test_updateJsonHandler(t *testing.T) {
 }
 
 func Test_getValueJsonHandler(t *testing.T) {
-	st := NewMemStorage()
-	st.AddGaugeValue("ss", -3444)
-	st.AddCounterValue("ss", 3)
-	handler := getValueJSONHandler(st)
+	appInstance := &app{
+		config:     nil,
+		memStorage: NewMemStorage(),
+		fs:         nil,
+	}
+
+	appInstance.memStorage.AddGaugeValue("ss", -3444)
+	appInstance.memStorage.AddCounterValue("ss", 3)
+	handler := getValueJSONHandler(appInstance)
 
 	type want struct {
 		status int
@@ -194,15 +206,19 @@ func Test_getValueJsonHandler(t *testing.T) {
 }
 
 func TestGzipCompression(t *testing.T) {
-	st := NewMemStorage()
-	st.AddGaugeValue("ss", -3444)
-	st.AddCounterValue("ss", 3)
+	appInstance := &app{
+		config:     nil,
+		memStorage: NewMemStorage(),
+		fs:         nil,
+	}
+	appInstance.memStorage.AddGaugeValue("ss", -3444)
+	appInstance.memStorage.AddCounterValue("ss", 3)
 	requestBody := `{"id":"ss","type":"counter","delta":3}
 `
 	htmlResponse := `<p>ss: -3444</p>`
 
 	t.Run("sends_gzip", func(t *testing.T) {
-		handler := gzipMiddleware(getValueJSONHandler(st))
+		handler := gzipMiddleware(getValueJSONHandler(appInstance))
 
 		buf := bytes.NewBuffer(nil)
 		zb := gzip.NewWriter(buf)
@@ -237,7 +253,7 @@ func TestGzipCompression(t *testing.T) {
 	})
 
 	t.Run("accept_gzip", func(t *testing.T) {
-		handler := gzipMiddleware(getValuesHandler(st))
+		handler := gzipMiddleware(getValuesHandler(appInstance))
 
 		buf := bytes.NewBufferString(requestBody)
 		r := httptest.NewRequest("POST", "/", buf)

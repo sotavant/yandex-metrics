@@ -78,12 +78,16 @@ func Test_getValueHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
-			s := NewMemStorage()
+			appInstance := &app{
+				config:     nil,
+				memStorage: NewMemStorage(),
+				fs:         nil,
+			}
 
 			if tt.mType == counterType {
-				s.AddCounterValue(tt.mName, tt.counterValue)
+				appInstance.memStorage.AddCounterValue(tt.mName, tt.counterValue)
 			} else {
-				s.AddGaugeValue(tt.mName, tt.gaugeValue)
+				appInstance.memStorage.AddGaugeValue(tt.mName, tt.gaugeValue)
 			}
 
 			rctx := chi.NewRouteContext()
@@ -92,7 +96,7 @@ func Test_getValueHandler(t *testing.T) {
 
 			request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
-			h := http.HandlerFunc(getValueHandler(s))
+			h := http.HandlerFunc(getValueHandler(appInstance))
 			h(w, request)
 			result := w.Result()
 			defer func() {
@@ -172,13 +176,17 @@ func Test_getValuesHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/", nil)
 			w := httptest.NewRecorder()
-			s := NewMemStorage()
-
-			for _, v := range tt.values {
-				s.AddGaugeValue(v.key, v.value)
+			appInstance := &app{
+				config:     nil,
+				memStorage: NewMemStorage(),
+				fs:         nil,
 			}
 
-			h := http.HandlerFunc(getValuesHandler(s))
+			for _, v := range tt.values {
+				appInstance.memStorage.AddGaugeValue(v.key, v.value)
+			}
+
+			h := http.HandlerFunc(getValuesHandler(appInstance))
 			h(w, request)
 			result := w.Result()
 			defer func() {

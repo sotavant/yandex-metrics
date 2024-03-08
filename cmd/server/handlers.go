@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func updateHandler(storage Storage, fs *FileStorage) func(res http.ResponseWriter, req *http.Request) {
+func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		mType := chi.URLParam(req, "type")
 		mName := chi.URLParam(req, "name")
@@ -22,21 +22,21 @@ func updateHandler(storage Storage, fs *FileStorage) func(res http.ResponseWrite
 				http.Error(res, "bad request", http.StatusBadRequest)
 			}
 
-			storage.AddGaugeValue(mName, val)
+			appInstance.memStorage.AddGaugeValue(mName, val)
 		case counterType:
 			val, err := parseValue[int64](mType, mVal)
 			if err != nil {
 				http.Error(res, "bad request", http.StatusBadRequest)
 			}
 
-			storage.AddCounterValue(mName, val)
+			appInstance.memStorage.AddCounterValue(mName, val)
 		default:
 			http.Error(res, "bad request", http.StatusBadRequest)
 			return
 		}
 
-		if fs.storeInterval == 0 {
-			if err := fs.Sync(storage); err != nil {
+		if appInstance.fs.storeInterval == 0 {
+			if err := appInstance.fs.Sync(appInstance.memStorage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -47,7 +47,7 @@ func updateHandler(storage Storage, fs *FileStorage) func(res http.ResponseWrite
 	}
 }
 
-func getValueHandler(storage Storage) func(w http.ResponseWriter, req *http.Request) {
+func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var strValue string
 		mType := chi.URLParam(req, "type")
@@ -58,7 +58,7 @@ func getValueHandler(storage Storage) func(w http.ResponseWriter, req *http.Requ
 			return
 		}
 
-		value := storage.GetValue(mType, mName)
+		value := appInstance.memStorage.GetValue(mType, mName)
 		if value == nil {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
@@ -80,12 +80,12 @@ func getValueHandler(storage Storage) func(w http.ResponseWriter, req *http.Requ
 	}
 }
 
-func getValuesHandler(storage Storage) func(w http.ResponseWriter, req *http.Request) {
+func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var resp = ""
 
-		if len(storage.GetGauge()) != 0 {
-			for k, v := range storage.GetGauge() {
+		if len(appInstance.memStorage.GetGauge()) != 0 {
+			for k, v := range appInstance.memStorage.GetGauge() {
 				resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, v), "0"), "."))
 			}
 		} else {

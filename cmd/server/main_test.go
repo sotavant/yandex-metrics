@@ -12,15 +12,21 @@ func Test_badTypeHandler(t *testing.T) {
 		responseStatus int
 	}
 
-	conf := config{
+	conf := &config{
 		addr:            "",
 		storeInterval:   0,
 		fileStoragePath: "/tmp/fs_test",
 		restore:         false,
 	}
-	fs, _ := NewFileStorage(conf)
+	fs, _ := NewFileStorage(*conf)
 
 	storage := NewMemStorage()
+
+	appInstanse := &app{
+		config:     conf,
+		memStorage: storage,
+		fs:         fs,
+	}
 
 	tests := []struct {
 		name    string
@@ -39,7 +45,7 @@ func Test_badTypeHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(updateHandler(storage, fs))
+			h := http.HandlerFunc(updateHandler(appInstanse))
 			h(w, request)
 			result := w.Result()
 			defer func() {

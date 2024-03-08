@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func updateJSONHandler(storage Storage, fs *FileStorage) func(res http.ResponseWriter, req *http.Request) {
+func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 
@@ -27,20 +27,20 @@ func updateJSONHandler(storage Storage, fs *FileStorage) func(res http.ResponseW
 				return
 			}
 
-			storage.AddGaugeValue(m.ID, *m.Value)
+			appInstance.memStorage.AddGaugeValue(m.ID, *m.Value)
 		case counterType:
 			if m.Delta == nil {
 				http.Error(res, "value absent", http.StatusBadRequest)
 				return
 			}
 
-			storage.AddCounterValue(m.ID, *m.Delta)
+			appInstance.memStorage.AddCounterValue(m.ID, *m.Delta)
 		default:
 			http.Error(res, "bad request", http.StatusBadRequest)
 			return
 		}
 
-		respStruct := getMetricsStruct(storage, m)
+		respStruct := getMetricsStruct(appInstance.memStorage, m)
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(respStruct); err != nil {
@@ -49,8 +49,8 @@ func updateJSONHandler(storage Storage, fs *FileStorage) func(res http.ResponseW
 			return
 		}
 
-		if fs.storeInterval == 0 {
-			if err := fs.Sync(storage); err != nil {
+		if appInstance.fs.storeInterval == 0 {
+			if err := appInstance.fs.Sync(appInstance.memStorage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -61,7 +61,7 @@ func updateJSONHandler(storage Storage, fs *FileStorage) func(res http.ResponseW
 	}
 }
 
-func getValueJSONHandler(storage Storage) func(res http.ResponseWriter, req *http.Request) {
+func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 
@@ -78,12 +78,12 @@ func getValueJSONHandler(storage Storage) func(res http.ResponseWriter, req *htt
 			return
 		}
 
-		if !storage.KeyExist(m.MType, m.ID) {
+		if !appInstance.memStorage.KeyExist(m.MType, m.ID) {
 			http.Error(res, "not found", http.StatusNotFound)
 			return
 		}
 
-		respStruct := getMetricsStruct(storage, m)
+		respStruct := getMetricsStruct(appInstance.memStorage, m)
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(respStruct); err != nil {
