@@ -199,6 +199,11 @@ func Test_getValuesHandler(t *testing.T) {
 func Test_pingDBHandler(t *testing.T) {
 	ctx := context.Background()
 	internal.InitLogger()
+	conf := initConfig()
+
+	if conf.databaseDSN == "" {
+		return
+	}
 
 	tests := []struct {
 		name       string
@@ -217,7 +222,7 @@ func Test_pingDBHandler(t *testing.T) {
 		},
 		{
 			name:       "goodDsn",
-			conf:       &config{databaseDSN: "postgres://ya_metrics:ya_metrics@localhost:5432/ya_metrics"},
+			conf:       conf,
 			wantStatus: http.StatusOK,
 		},
 	}
