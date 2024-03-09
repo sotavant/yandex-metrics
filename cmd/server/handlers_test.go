@@ -164,6 +164,7 @@ func Test_getValuesHandler(t *testing.T) {
 			want: struct {
 				status int
 				value  string
+				//}{status: http.StatusOK, value: `<p>pp: -456.123</p><p>ss: 134.456</p>`},
 			}{status: http.StatusOK, value: `<p>ss: 134.456</p><p>pp: -456.123</p>`},
 		},
 	}

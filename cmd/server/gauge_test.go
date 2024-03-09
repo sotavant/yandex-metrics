@@ -15,6 +15,13 @@ func Test_handleGauge(t *testing.T) {
 		value       float64
 	}
 
+	conf := config{
+		addr:            "",
+		storeInterval:   0,
+		fileStoragePath: "/tmp/fs_test",
+		restore:         false,
+	}
+
 	tests := []struct {
 		name    string
 		request string
@@ -59,6 +66,7 @@ func Test_handleGauge(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			fs, _ := NewFileStorage(conf)
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
 
@@ -69,7 +77,7 @@ func Test_handleGauge(t *testing.T) {
 
 			request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
-			h := http.HandlerFunc(updateHandler(tt.storage))
+			h := http.HandlerFunc(updateHandler(tt.storage, fs))
 			h(w, request)
 			result := w.Result()
 			defer func() {

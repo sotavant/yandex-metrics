@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -106,6 +108,49 @@ func TestMemStorage_AddCounterValue(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.wants.value, m.Counter[tt.args.key])
+		})
+	}
+}
+
+func TestMemStorage_AddValue(t *testing.T) {
+	m := NewMemStorage()
+
+	type args struct {
+		metric internal.Metrics
+	}
+
+	var delta int64 = 11
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "correct type",
+			args: struct{ metric internal.Metrics }{metric: internal.Metrics{
+				ID:    "aa",
+				MType: counterType,
+				Delta: &delta,
+				Value: nil,
+			}},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "bad type",
+			args: struct{ metric internal.Metrics }{metric: internal.Metrics{
+				ID:    "aa",
+				MType: "someBadType",
+				Delta: &delta,
+				Value: nil,
+			}},
+			wantErr: assert.Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			tt.wantErr(t, m.AddValue(tt.args.metric), fmt.Sprintf("AddValue(%v)", tt.args.metric))
 		})
 	}
 }

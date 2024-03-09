@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/sotavant/yandex-metrics/internal"
 	"time"
 )
 
@@ -17,6 +18,7 @@ func main() {
 
 	var poolIntervalDuration = time.Duration(Config.pollInterval) * time.Second
 	var reportIntervalDuration = time.Duration(Config.reportInterval) * time.Second
+	internal.InitLogger()
 	ms := NewStorage()
 	forever1 := make(chan bool)
 	forever2 := make(chan bool)
