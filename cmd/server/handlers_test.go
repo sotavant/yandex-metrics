@@ -229,6 +229,10 @@ func Test_pingDBHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			h(w, request)
 			result := w.Result()
+			defer func() {
+				err := result.Body.Close()
+				assert.NoError(t, err)
+			}()
 
 			assert.Equal(t, tt.wantStatus, result.StatusCode)
 		})

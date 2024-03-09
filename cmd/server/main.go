@@ -95,6 +95,7 @@ func initDB(ctx context.Context, conf config) (*pgx.Conn, error) {
 		return nil, nil
 	}
 
+	internal.Logger.Infow("databaseDSN", "dsn", conf.databaseDSN)
 	dbConn, err := pgx.Connect(ctx, conf.databaseDSN)
 	if err != nil {
 		internal.Logger.Infow("Unable to connect to database", "err", err)
