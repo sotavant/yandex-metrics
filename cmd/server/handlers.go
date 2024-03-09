@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"net/http"
 	"strconv"
@@ -98,6 +100,23 @@ func getValuesHandler(storage Storage) func(w http.ResponseWriter, req *http.Req
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
 		}
+	}
+}
+
+func pingDBHandler(ctx context.Context, dbConn *pgx.Conn) func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		if dbConn == nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		err := dbConn.Ping(ctx)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
 

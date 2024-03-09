@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"net/http"
 	"sync"
@@ -15,11 +17,22 @@ const (
 )
 
 func main() {
-	config := new(config)
-	config.parseFlags()
-
+	internal.InitLogger()
+	conf := initConfig()
+	ctx := context.Background()
+	dbConn, _ := initDB(ctx, *conf)
 	mem := NewMemStorage()
-	fs, err := NewFileStorage(*config)
+	fs, err := NewFileStorage(*conf)
+
+	if dbConn != nil {
+		defer func(dbConn *pgx.Conn, ctx context.Context) {
+			err := dbConn.Close(ctx)
+			if err != nil {
+				panic("error in close dbConn")
+			}
+		}(dbConn, ctx)
+	}
+
 	defer func(fs *FileStorage) {
 		err := fs.Sync(mem)
 		if err != nil {
@@ -40,9 +53,7 @@ func main() {
 		panic(err)
 	}
 
-	internal.InitLogger()
-
-	r := initRouter(mem, fs)
+	r := initRouter(ctx, mem, fs, dbConn)
 
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)
@@ -50,7 +61,7 @@ func main() {
 	wg.Add(2)
 
 	go func() {
-		err = http.ListenAndServe(config.addr, r)
+		err = http.ListenAndServe(conf.addr, r)
 		if err != nil {
 			close(httpChan)
 			panic(err)
@@ -66,7 +77,7 @@ func main() {
 	wg.Wait()
 }
 
-func initRouter(mem Storage, fs *FileStorage) *chi.Mux {
+func initRouter(ctx context.Context, mem Storage, fs *FileStorage, dbConn *pgx.Conn) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(mem, fs))))
@@ -74,6 +85,21 @@ func initRouter(mem Storage, fs *FileStorage) *chi.Mux {
 	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(mem, fs))))
 	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(mem))))
 	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(mem))))
+	r.Get("/ping", withLogging(gzipMiddleware(pingDBHandler(ctx, dbConn))))
 
 	return r
+}
+
+func initDB(ctx context.Context, conf config) (*pgx.Conn, error) {
+	if conf.databaseDSN == "" {
+		return nil, nil
+	}
+
+	dbConn, err := pgx.Connect(ctx, conf.databaseDSN)
+	if err != nil {
+		internal.Logger.Infow("Unable to connect to database", "err", err)
+		return nil, err
+	}
+
+	return dbConn, nil
 }

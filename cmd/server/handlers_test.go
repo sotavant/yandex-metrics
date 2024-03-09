@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
+	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -191,6 +192,45 @@ func Test_getValuesHandler(t *testing.T) {
 			bodyBytes, err := io.ReadAll(result.Body)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want.value, string(bodyBytes))
+		})
+	}
+}
+
+func Test_pingDBHandler(t *testing.T) {
+	ctx := context.Background()
+	internal.InitLogger()
+
+	tests := []struct {
+		name       string
+		conf       *config
+		wantStatus int
+	}{
+		{
+			name:       "emptyDsn",
+			conf:       &config{databaseDSN: ""},
+			wantStatus: http.StatusInternalServerError,
+		},
+		{
+			name:       "badDsn",
+			conf:       &config{databaseDSN: "postgres://username:password@localhost:5432/database_name"},
+			wantStatus: http.StatusInternalServerError,
+		},
+		{
+			name:       "goodDsn",
+			conf:       &config{databaseDSN: "postgres://ya_metrics:ya_metrics@localhost:5432/ya_metrics"},
+			wantStatus: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dbConn, _ := initDB(ctx, *tt.conf)
+			h := http.HandlerFunc(pingDBHandler(ctx, dbConn))
+			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
+			w := httptest.NewRecorder()
+			h(w, request)
+			result := w.Result()
+
+			assert.Equal(t, tt.wantStatus, result.StatusCode)
 		})
 	}
 }

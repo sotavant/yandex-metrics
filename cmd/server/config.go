@@ -11,6 +11,7 @@ const (
 	storeIntervalVar   = `STORE_INTERVAL`
 	fileStoragePathVar = `FILE_STORAGE_PATH`
 	restoreVar         = `RESTORE`
+	databaseDSNVar     = `DATABASE_DSN`
 )
 
 type config struct {
@@ -18,6 +19,13 @@ type config struct {
 	storeInterval   uint
 	fileStoragePath string
 	restore         bool
+	databaseDSN     string
+}
+
+func initConfig() *config {
+	conf := new(config)
+	conf.parseFlags()
+	return conf
 }
 
 func (c *config) parseFlags() {
@@ -25,6 +33,7 @@ func (c *config) parseFlags() {
 	flag.BoolVar(&c.restore, "r", true, "need restore values")
 	flag.UintVar(&c.storeInterval, "i", 300, "store interval")
 	flag.StringVar(&c.fileStoragePath, "f", "/tmp/metrics-db.json", "file storage path")
+	flag.StringVar(&c.databaseDSN, "d", "", "database DSN")
 
 	flag.Parse()
 
@@ -52,5 +61,9 @@ func (c *config) parseFlags() {
 		}
 
 		c.restore = boolVal
+	}
+
+	if databaseDSN := os.Getenv(databaseDSNVar); databaseDSN != "" {
+		c.databaseDSN = databaseDSN
 	}
 }
