@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"io"
 	"os"
 	"sync"
@@ -33,7 +34,7 @@ func NewFileStorage(conf config) (*FileStorage, error) {
 	}, nil
 }
 
-func (fs *FileStorage) Restore(st Storage) error {
+func (fs *FileStorage) Restore(st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
 
@@ -66,7 +67,7 @@ func (fs *FileStorage) Restore(st Storage) error {
 	return nil
 }
 
-func (fs *FileStorage) Sync(st Storage) error {
+func (fs *FileStorage) Sync(st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
 
@@ -77,7 +78,7 @@ func (fs *FileStorage) Sync(st Storage) error {
 	for k, v := range st.GetGauge() {
 		m := internal.Metrics{
 			ID:    k,
-			MType: gaugeType,
+			MType: internal.GaugeType,
 			Delta: nil,
 			Value: &v,
 		}
@@ -90,7 +91,7 @@ func (fs *FileStorage) Sync(st Storage) error {
 	for k, v := range st.GetCounters() {
 		m := internal.Metrics{
 			ID:    k,
-			MType: counterType,
+			MType: internal.CounterType,
 			Delta: &v,
 			Value: nil,
 		}
@@ -107,7 +108,7 @@ func (fs *FileStorage) Sync(st Storage) error {
 	return nil
 }
 
-func (fs *FileStorage) SyncByInterval(st Storage, ch chan bool) error {
+func (fs *FileStorage) SyncByInterval(st repository.Storage, ch chan bool) error {
 	if fs.storeInterval == 0 {
 		close(ch)
 		return nil

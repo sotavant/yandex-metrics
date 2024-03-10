@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -19,7 +21,7 @@ func Test_updateJsonHandler(t *testing.T) {
 		fileStoragePath: "/tmp/fs_test",
 		restore:         false,
 	}
-	st := NewMemStorage()
+	st := in_memory.NewMetricsRepository()
 	fs, err := NewFileStorage(conf)
 	assert.NoError(t, err)
 
@@ -120,12 +122,14 @@ func Test_updateJsonHandler(t *testing.T) {
 func Test_getValueJsonHandler(t *testing.T) {
 	appInstance := &app{
 		config:     nil,
-		memStorage: NewMemStorage(),
+		memStorage: in_memory.NewMetricsRepository(),
 		fs:         nil,
 	}
 
-	appInstance.memStorage.AddGaugeValue("ss", -3444)
-	appInstance.memStorage.AddCounterValue("ss", 3)
+	err := appInstance.memStorage.AddGaugeValue(context.Background(), "ss", -3444)
+	assert.NoError(t, err)
+	err = appInstance.memStorage.AddCounterValue(context.Background(), "ss", 3)
+	assert.NoError(t, err)
 	handler := getValueJSONHandler(appInstance)
 
 	type want struct {
@@ -208,11 +212,13 @@ func Test_getValueJsonHandler(t *testing.T) {
 func TestGzipCompression(t *testing.T) {
 	appInstance := &app{
 		config:     nil,
-		memStorage: NewMemStorage(),
+		memStorage: in_memory.NewMetricsRepository(),
 		fs:         nil,
 	}
-	appInstance.memStorage.AddGaugeValue("ss", -3444)
-	appInstance.memStorage.AddCounterValue("ss", 3)
+	err := appInstance.memStorage.AddGaugeValue(context.Background(), "ss", -3444)
+	assert.NoError(t, err)
+	err = appInstance.memStorage.AddCounterValue(context.Background(), "ss", 3)
+	assert.NoError(t, err)
 	requestBody := `{"id":"ss","type":"counter","delta":3}
 `
 	htmlResponse := `<p>ss: -3444</p>`

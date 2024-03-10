@@ -1,6 +1,7 @@
-package main
+package in_memory
 
 import (
+	"context"
 	"fmt"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,9 @@ func TestMemStorage_AddGaugeValue(t *testing.T) {
 		key   string
 		value float64
 	}
+
+	ctx := context.Background()
+
 	tests := []struct {
 		name   string
 		fields fields
@@ -47,10 +51,12 @@ func TestMemStorage_AddGaugeValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMemStorage()
-			m.AddGaugeValue(tt.args.key, tt.args.value)
+			m := NewMetricsRepository()
+			err := m.AddGaugeValue(ctx, tt.args.key, tt.args.value)
+			assert.NoError(t, err)
 			if tt.name == `updateValue` {
-				m.AddGaugeValue(tt.args.key, tt.args.value)
+				err = m.AddGaugeValue(ctx, tt.args.key, tt.args.value)
+				assert.NoError(t, err)
 			}
 
 			assert.Equal(t, tt.wants.value, m.Gauge[tt.args.key])
@@ -68,6 +74,8 @@ func TestMemStorage_AddCounterValue(t *testing.T) {
 		key   string
 		value int64
 	}
+
+	ctx := context.Background()
 
 	tests := []struct {
 		name   string
@@ -101,10 +109,12 @@ func TestMemStorage_AddCounterValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMemStorage()
-			m.AddCounterValue(tt.args.key, tt.args.value)
+			m := NewMetricsRepository()
+			err := m.AddCounterValue(ctx, tt.args.key, tt.args.value)
+			assert.NoError(t, err)
 			if tt.name == `updateValue` {
-				m.AddCounterValue(tt.args.key, tt.args.value)
+				err = m.AddCounterValue(ctx, tt.args.key, tt.args.value)
+				assert.NoError(t, err)
 			}
 
 			assert.Equal(t, tt.wants.value, m.Counter[tt.args.key])
@@ -113,7 +123,7 @@ func TestMemStorage_AddCounterValue(t *testing.T) {
 }
 
 func TestMemStorage_AddValue(t *testing.T) {
-	m := NewMemStorage()
+	m := NewMetricsRepository()
 
 	type args struct {
 		metric internal.Metrics
@@ -130,7 +140,7 @@ func TestMemStorage_AddValue(t *testing.T) {
 			name: "correct type",
 			args: struct{ metric internal.Metrics }{metric: internal.Metrics{
 				ID:    "aa",
-				MType: counterType,
+				MType: internal.CounterType,
 				Delta: &delta,
 				Value: nil,
 			}},

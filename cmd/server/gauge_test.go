@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
+	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -25,7 +27,7 @@ func Test_handleGauge(t *testing.T) {
 	tests := []struct {
 		name    string
 		request string
-		storage *MemStorage
+		storage *in_memory.MetricsRepository
 		want    want
 		mName   string
 		mValue  string
@@ -35,7 +37,7 @@ func Test_handleGauge(t *testing.T) {
 			request: `/update/gauge/newValue/1`,
 			mName:   `newValue`,
 			mValue:  `1`,
-			storage: NewMemStorage(),
+			storage: in_memory.NewMetricsRepository(),
 			want: struct {
 				contentType int
 				value       float64
@@ -46,7 +48,7 @@ func Test_handleGauge(t *testing.T) {
 			request: `/update/gauge/updateValue/3`,
 			mName:   `updateValue`,
 			mValue:  `3`,
-			storage: NewMemStorage(),
+			storage: in_memory.NewMetricsRepository(),
 			want: struct {
 				contentType int
 				value       float64
@@ -57,7 +59,7 @@ func Test_handleGauge(t *testing.T) {
 			request: `/update/gauge/badValue/sdfsdfsdf`,
 			mName:   `badValue`,
 			mValue:  `sdfsdfsdf`,
-			storage: NewMemStorage(),
+			storage: in_memory.NewMetricsRepository(),
 			want: struct {
 				contentType int
 				value       float64
@@ -79,7 +81,7 @@ func Test_handleGauge(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add(`type`, gaugeType)
+			rctx.URLParams.Add(`type`, internal.GaugeType)
 			rctx.URLParams.Add(`name`, tt.mName)
 			rctx.URLParams.Add(`value`, tt.mValue)
 

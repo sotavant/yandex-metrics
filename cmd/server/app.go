@@ -5,11 +5,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 )
 
 type app struct {
 	config     *config
-	memStorage *MemStorage
+	memStorage *in_memory.MetricsRepository
 	fs         *FileStorage
 	dbConn     *pgx.Conn
 }
@@ -18,7 +19,7 @@ func initApp(ctx context.Context) (*app, error) {
 	conf := new(config)
 	conf.parseFlags()
 
-	mem := NewMemStorage()
+	mem := in_memory.NewMetricsRepository()
 	fs, err := NewFileStorage(*conf)
 
 	if err != nil {
@@ -64,7 +65,7 @@ func initDB(ctx context.Context, conf config) *pgx.Conn {
 	return dbConn
 }
 
-func (app *app) initRouters(ctx context.Context) *chi.Mux {
+func (app *app) initRouters() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(app))))
@@ -72,7 +73,7 @@ func (app *app) initRouters(ctx context.Context) *chi.Mux {
 	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(app))))
 	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(app))))
 	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(app))))
-	r.Get("/ping", withLogging(gzipMiddleware(pingDBHandler(ctx, app.dbConn))))
+	r.Get("/ping", withLogging(gzipMiddleware(pingDBHandler(app.dbConn))))
 
 	return r
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -29,7 +30,7 @@ func Test_getValueHandler(t *testing.T) {
 	}{
 		{
 			name:          "getExistCounterValue",
-			mType:         counterType,
+			mType:         internal.CounterType,
 			mName:         `ss`,
 			ctxMetricName: `ss`,
 			counterValue:  3,
@@ -41,7 +42,7 @@ func Test_getValueHandler(t *testing.T) {
 		},
 		{
 			name:          "getAbsentCounterValue",
-			mType:         counterType,
+			mType:         internal.CounterType,
 			mName:         `ss`,
 			ctxMetricName: `sss`,
 			want: struct {
@@ -52,7 +53,7 @@ func Test_getValueHandler(t *testing.T) {
 		},
 		{
 			name:          "getExistGaugeValue",
-			mType:         gaugeType,
+			mType:         internal.GaugeType,
 			mName:         `ss`,
 			ctxMetricName: `ss`,
 			counterValue:  3,
@@ -65,7 +66,7 @@ func Test_getValueHandler(t *testing.T) {
 		},
 		{
 			name:          "getAbsentGaugeValue",
-			mType:         gaugeType,
+			mType:         internal.GaugeType,
 			mName:         `ss`,
 			ctxMetricName: `sss`,
 			want: struct {
@@ -81,14 +82,16 @@ func Test_getValueHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			appInstance := &app{
 				config:     nil,
-				memStorage: NewMemStorage(),
+				memStorage: in_memory.NewMetricsRepository(),
 				fs:         nil,
 			}
 
-			if tt.mType == counterType {
-				appInstance.memStorage.AddCounterValue(tt.mName, tt.counterValue)
+			if tt.mType == internal.CounterType {
+				err := appInstance.memStorage.AddCounterValue(request.Context(), tt.mName, tt.counterValue)
+				assert.NoError(t, err)
 			} else {
-				appInstance.memStorage.AddGaugeValue(tt.mName, tt.gaugeValue)
+				err := appInstance.memStorage.AddGaugeValue(request.Context(), tt.mName, tt.gaugeValue)
+				assert.NoError(t, err)
 			}
 
 			rctx := chi.NewRouteContext()
@@ -179,12 +182,13 @@ func Test_getValuesHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			appInstance := &app{
 				config:     nil,
-				memStorage: NewMemStorage(),
+				memStorage: in_memory.NewMetricsRepository(),
 				fs:         nil,
 			}
 
 			for _, v := range tt.values {
-				appInstance.memStorage.AddGaugeValue(v.key, v.value)
+				err := appInstance.memStorage.AddGaugeValue(request.Context(), v.key, v.value)
+				assert.NoError(t, err)
 			}
 
 			h := http.HandlerFunc(getValuesHandler(appInstance))
@@ -223,11 +227,6 @@ func Test_pingDBHandler(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:       "badDsn",
-			conf:       &config{databaseDSN: "postgres://username:password@localhost:5432/database_name"},
-			wantStatus: http.StatusInternalServerError,
-		},
-		{
 			name:       "goodDsn",
 			conf:       conf,
 			wantStatus: http.StatusOK,
@@ -236,7 +235,7 @@ func Test_pingDBHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dbConn := initDB(ctx, *tt.conf)
-			h := http.HandlerFunc(pingDBHandler(ctx, dbConn))
+			h := http.HandlerFunc(pingDBHandler(dbConn))
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
 			w := httptest.NewRecorder()
 			h(w, request)

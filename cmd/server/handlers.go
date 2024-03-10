@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -18,20 +17,29 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 		mVal := chi.URLParam(req, "value")
 
 		switch mType {
-		case gaugeType:
+		case internal.GaugeType:
 			val, err := parseValue[float64](mType, mVal)
 			if err != nil {
 				http.Error(res, "bad request", http.StatusBadRequest)
+				return
 			}
 
-			appInstance.memStorage.AddGaugeValue(mName, val)
-		case counterType:
+			err = appInstance.memStorage.AddGaugeValue(req.Context(), mName, val)
+			if err != nil {
+				http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+		case internal.CounterType:
 			val, err := parseValue[int64](mType, mVal)
 			if err != nil {
 				http.Error(res, "bad request", http.StatusBadRequest)
 			}
 
-			appInstance.memStorage.AddCounterValue(mName, val)
+			err = appInstance.memStorage.AddCounterValue(req.Context(), mName, val)
+			if err != nil {
+				http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
 		default:
 			http.Error(res, "bad request", http.StatusBadRequest)
 			return
@@ -55,7 +63,7 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 		mType := chi.URLParam(req, "type")
 		mName := chi.URLParam(req, "name")
 
-		if mType != gaugeType && mType != counterType {
+		if mType != internal.GaugeType && mType != internal.CounterType {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
@@ -66,7 +74,7 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 			return
 		}
 
-		if mType == gaugeType {
+		if mType == internal.GaugeType {
 			strValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, value), "0"), ".")
 		} else {
 			strValue = strconv.FormatInt(value.(int64), 10)
@@ -103,14 +111,14 @@ func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Re
 	}
 }
 
-func pingDBHandler(ctx context.Context, dbConn *pgx.Conn) func(w http.ResponseWriter, req *http.Request) {
+func pingDBHandler(dbConn *pgx.Conn) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if dbConn == nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		err := dbConn.Ping(ctx)
+		err := dbConn.Ping(req.Context())
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -122,14 +130,14 @@ func pingDBHandler(ctx context.Context, dbConn *pgx.Conn) func(w http.ResponseWr
 
 func parseValue[T float64 | int64](mType, mValue string) (T, error) {
 	switch mType {
-	case gaugeType:
+	case internal.GaugeType:
 		floatVal, err := strconv.ParseFloat(strings.TrimSpace(mValue), 64)
 		if err != nil {
 			return 0, err
 		}
 
 		return T(floatVal), nil
-	case counterType:
+	case internal.CounterType:
 		intVal, err := strconv.ParseInt(strings.TrimSpace(mValue), 10, 64)
 		if err != nil {
 			return 0, err

@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	gaugeType          = "gauge"
-	counterType        = "counter"
+	counterType        = internal.CounterType
 	serverAddress      = "localhost:8080"
 	acceptableEncoding = "gzip"
 )
@@ -34,7 +33,7 @@ func main() {
 		}(appInstance.dbConn, ctx)
 	}
 
-	r := appInstance.initRouters(ctx)
+	r := appInstance.initRouters()
 
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
@@ -83,7 +84,7 @@ func TestFileStorage_Restore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fs, _ := NewFileStorage(conf)
 			fs.needRestore = tt.needRestore
-			ms := NewMemStorage()
+			ms := in_memory.NewMetricsRepository()
 
 			defer func(file *os.File) {
 				err := file.Close()
@@ -124,12 +125,12 @@ func TestFileStorage_Sync(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		storage MemStorage
+		storage in_memory.MetricsRepository
 		want    []string
 	}{
 		{
 			name: "checkWriteToFile",
-			storage: MemStorage{
+			storage: in_memory.MetricsRepository{
 				Gauge: map[string]float64{
 					"s": 111,
 				},

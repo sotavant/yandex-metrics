@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"net/http"
 )
 
@@ -21,20 +22,30 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 		}
 
 		switch m.MType {
-		case gaugeType:
+		case internal.GaugeType:
 			if m.Value == nil {
 				http.Error(res, "value absent", http.StatusBadRequest)
 				return
 			}
 
-			appInstance.memStorage.AddGaugeValue(m.ID, *m.Value)
-		case counterType:
+			err := appInstance.memStorage.AddGaugeValue(req.Context(), m.ID, *m.Value)
+			if err != nil {
+				internal.Logger.Infow("error in add value", "err", err)
+				http.Error(res, "internal server error", http.StatusInternalServerError)
+				return
+			}
+		case internal.CounterType:
 			if m.Delta == nil {
 				http.Error(res, "value absent", http.StatusBadRequest)
 				return
 			}
 
-			appInstance.memStorage.AddCounterValue(m.ID, *m.Delta)
+			err := appInstance.memStorage.AddCounterValue(req.Context(), m.ID, *m.Delta)
+			if err != nil {
+				internal.Logger.Infow("error in add counter value", "err", err)
+				http.Error(res, "internal server error", http.StatusInternalServerError)
+				return
+			}
 		default:
 			http.Error(res, "bad request", http.StatusBadRequest)
 			return
@@ -73,7 +84,7 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 			http.Error(res, "id absent", http.StatusBadRequest)
 		}
 
-		if m.MType != gaugeType && m.MType != counterType {
+		if m.MType != internal.GaugeType && m.MType != internal.CounterType {
 			http.Error(res, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
@@ -96,14 +107,14 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 	}
 }
 
-func getMetricsStruct(storage Storage, before internal.Metrics) internal.Metrics {
+func getMetricsStruct(storage repository.Storage, before internal.Metrics) internal.Metrics {
 	m := before
 
 	switch m.MType {
-	case gaugeType:
+	case internal.GaugeType:
 		gValue := storage.GetGaugeValue(m.ID)
 		m.Value = &gValue
-	case counterType:
+	case internal.CounterType:
 		cValue := storage.GetCounterValue(m.ID)
 		m.Delta = &cValue
 	}
