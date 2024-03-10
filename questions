@@ -12,3 +12,5 @@ Iter9
 
 Мы добавили вот это: http://j.wecan-it.ru/1709574466051.jpg
 А вот обработка в хандлерах: http://j.wecan-it.ru/1709574534709.jpg
+
+4. defer close, syncFS в main.go штук, которые инициализированы в app.go

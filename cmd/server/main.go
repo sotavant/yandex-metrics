@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"net/http"
 	"sync"
@@ -22,17 +23,17 @@ func main() {
 	}
 	defer appInstance.syncFs()
 
-	if dbConn != nil {
+	if appInstance.dbConn != nil {
 		defer func(dbConn *pgx.Conn, ctx context.Context) {
 			err := dbConn.Close(ctx)
 			if err != nil {
 				panic("error in close dbConn")
 			}
-		}(dbConn, ctx)
+		}(appInstance.dbConn, ctx)
 	}
 
 	internal.InitLogger()
-	r := appInstance.initRouters()
+	r := appInstance.initRouters(ctx)
 
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)

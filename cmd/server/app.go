@@ -1,19 +1,25 @@
 package main
 
-import "github.com/go-chi/chi/v5"
+import (
+	"context"
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/sotavant/yandex-metrics/internal"
+)
 
 type app struct {
 	config     *config
 	memStorage *MemStorage
 	fs         *FileStorage
+	dbConn     *pgx.Conn
 }
 
-func initApp() (*app, error) {
-	config := new(config)
-	config.parseFlags()
+func initApp(ctx context.Context) (*app, error) {
+	conf := new(config)
+	conf.parseFlags()
 
 	mem := NewMemStorage()
-	fs, err := NewFileStorage(*config)
+	fs, err := NewFileStorage(*conf)
 
 	if err != nil {
 		panic(err)
@@ -23,10 +29,13 @@ func initApp() (*app, error) {
 		panic(err)
 	}
 
+	dbConn, _ := initDB(ctx, *conf)
+
 	return &app{
-		config:     config,
+		config:     conf,
 		memStorage: mem,
 		fs:         fs,
+		dbConn:     dbConn,
 	}, nil
 }
 
@@ -42,7 +51,21 @@ func (app *app) syncFs() {
 	}
 }
 
-func (app *app) initRouters() *chi.Mux {
+func initDB(ctx context.Context, conf config) (*pgx.Conn, error) {
+	if conf.databaseDSN == "" {
+		return nil, nil
+	}
+
+	dbConn, err := pgx.Connect(ctx, conf.databaseDSN)
+	if err != nil {
+		internal.Logger.Infow("Unable to connect to database", "err", err)
+		return nil, err
+	}
+
+	return dbConn, nil
+}
+
+func (app *app) initRouters(ctx context.Context) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(app))))
@@ -50,6 +73,7 @@ func (app *app) initRouters() *chi.Mux {
 	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(app))))
 	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(app))))
 	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(app))))
+	r.Get("/ping", withLogging(gzipMiddleware(pingDBHandler(ctx, app.dbConn))))
 
 	return r
 }

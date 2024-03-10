@@ -212,7 +212,6 @@ func Test_pingDBHandler(t *testing.T) {
 	if conf.databaseDSN == "" {
 		return
 	}
-
 	tests := []struct {
 		name       string
 		conf       *config
