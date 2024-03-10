@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/sotavant/yandex-metrics/internal"
 	"net/http"
 	"sync"
@@ -14,11 +15,21 @@ const (
 )
 
 func main() {
-	appInstance, err := initApp()
+	ctx := context.Background()
+	appInstance, err := initApp(ctx)
 	if err != nil {
 		panic(err)
 	}
 	defer appInstance.syncFs()
+
+	if dbConn != nil {
+		defer func(dbConn *pgx.Conn, ctx context.Context) {
+			err := dbConn.Close(ctx)
+			if err != nil {
+				panic("error in close dbConn")
+			}
+		}(dbConn, ctx)
+	}
 
 	internal.InitLogger()
 	r := appInstance.initRouters()
