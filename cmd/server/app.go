@@ -29,7 +29,7 @@ func initApp(ctx context.Context) (*app, error) {
 		panic(err)
 	}
 
-	dbConn, _ := initDB(ctx, *conf)
+	dbConn := initDB(ctx, *conf)
 
 	return &app{
 		config:     conf,
@@ -51,18 +51,17 @@ func (app *app) syncFs() {
 	}
 }
 
-func initDB(ctx context.Context, conf config) (*pgx.Conn, error) {
+func initDB(ctx context.Context, conf config) *pgx.Conn {
 	if conf.databaseDSN == "" {
-		return nil, nil
+		return nil
 	}
 
 	dbConn, err := pgx.Connect(ctx, conf.databaseDSN)
 	if err != nil {
-		internal.Logger.Infow("Unable to connect to database", "err", err)
-		return nil, err
+		internal.Logger.Panicw("Unable to connect to database", "err", err)
 	}
 
-	return dbConn, nil
+	return dbConn
 }
 
 func (app *app) initRouters(ctx context.Context) *chi.Mux {
