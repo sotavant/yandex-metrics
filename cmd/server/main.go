@@ -17,6 +17,8 @@ const (
 
 func main() {
 	ctx := context.Background()
+	internal.InitLogger()
+
 	appInstance, err := initApp(ctx)
 	if err != nil {
 		panic(err)
@@ -32,7 +34,6 @@ func main() {
 		}(appInstance.dbConn, ctx)
 	}
 
-	internal.InitLogger()
 	r := appInstance.initRouters(ctx)
 
 	httpChan := make(chan bool)

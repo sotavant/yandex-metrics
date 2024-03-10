@@ -14,3 +14,4 @@ Iter9
 А вот обработка в хандлерах: http://j.wecan-it.ru/1709574534709.jpg
 
 4. defer close, syncFS в main.go штук, которые инициализированы в app.go
+5. Зачем context в запросах (напирмер select - QueryContext)
