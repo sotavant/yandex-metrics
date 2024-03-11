@@ -89,7 +89,14 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 			return
 		}
 
-		if !appInstance.memStorage.KeyExist(m.MType, m.ID) {
+		exist, err := appInstance.memStorage.KeyExist(req.Context(), m.MType, m.ID)
+		if err != nil {
+			internal.Logger.Infow("error in encode")
+			http.Error(res, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		if !exist {
 			http.Error(res, "not found", http.StatusNotFound)
 			return
 		}

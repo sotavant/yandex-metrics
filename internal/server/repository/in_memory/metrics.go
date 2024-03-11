@@ -13,10 +13,14 @@ type MetricsRepository struct {
 
 func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value float64) error {
 	m.Gauge[key] = value
+
+	return nil
 }
 
 func (m *MetricsRepository) AddCounterValue(ctx context.Context, key string, value int64) error {
 	m.Counter[key] += value
+
+	return nil
 }
 
 func (m *MetricsRepository) AddValue(ctx context.Context, metric internal.Metrics) error {
@@ -34,38 +38,38 @@ func (m *MetricsRepository) AddValue(ctx context.Context, metric internal.Metric
 	return err
 }
 
-func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) interface{} {
+func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (interface{}, error) {
 	switch mType {
 	case internal.GaugeType:
 		val, ok := m.Gauge[key]
 		if ok {
-			return val
+			return val, nil
 		}
 	case internal.CounterType:
 		val, ok := m.Counter[key]
 		if ok {
-			return val
+			return val, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) bool {
+func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bool, error) {
 	switch mType {
 	case internal.GaugeType:
 		_, ok := m.Gauge[key]
 		if ok {
-			return true
+			return true, nil
 		}
 	case internal.CounterType:
 		_, ok := m.Counter[key]
 		if ok {
-			return true
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 func (m *MetricsRepository) GetGauge(ctx context.Context) map[string]float64 {

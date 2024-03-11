@@ -68,7 +68,12 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 			return
 		}
 
-		value := appInstance.memStorage.GetValue(mType, mName)
+		value, err := appInstance.memStorage.GetValue(req.Context(), mType, mName)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
 		if value == nil {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
@@ -80,7 +85,7 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 			strValue = strconv.FormatInt(value.(int64), 10)
 		}
 
-		_, err := w.Write([]byte(strValue))
+		_, err = w.Write([]byte(strValue))
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
