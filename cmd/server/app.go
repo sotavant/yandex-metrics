@@ -6,42 +6,53 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
 )
 
 type app struct {
 	config     *config
 	memStorage *in_memory.MetricsRepository
+	dbStorage  *postgres.MetricsRepository
 	fs         *FileStorage
 	dbConn     *pgx.Conn
 }
 
 func initApp(ctx context.Context) (*app, error) {
+	var err error
+
 	conf := new(config)
 	conf.parseFlags()
-
-	mem := in_memory.NewMetricsRepository()
-	fs, err := NewFileStorage(*conf)
-
-	if err != nil {
-		panic(err)
-	}
-
-	if err = fs.Restore(mem); err != nil {
-		panic(err)
-	}
-
 	dbConn := initDB(ctx, *conf)
+	appInstance := new(app)
 
-	return &app{
-		config:     conf,
-		memStorage: mem,
-		fs:         fs,
-		dbConn:     dbConn,
-	}, nil
+	if dbConn == nil {
+		appInstance.memStorage = in_memory.NewMetricsRepository()
+		appInstance.fs, err = NewFileStorage(*conf)
+
+		if err != nil {
+			panic(err)
+		}
+
+		if err = appInstance.fs.Restore(ctx, appInstance.memStorage); err != nil {
+			panic(err)
+		}
+	} else {
+		appInstance.dbStorage, err = postgres.NewMemStorage(ctx, dbConn, conf.tableName)
+
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return appInstance, nil
 }
 
-func (app *app) syncFs() {
-	err := app.fs.Sync(app.memStorage)
+func (app *app) syncFs(ctx context.Context) {
+	if app.memStorage == nil {
+		return
+	}
+
+	err := app.fs.Sync(ctx, app.memStorage)
 	if err != nil {
 		panic(err)
 	}

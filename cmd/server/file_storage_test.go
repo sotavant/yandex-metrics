@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/stretchr/testify/assert"
@@ -85,6 +86,7 @@ func TestFileStorage_Restore(t *testing.T) {
 			fs, _ := NewFileStorage(conf)
 			fs.needRestore = tt.needRestore
 			ms := in_memory.NewMetricsRepository()
+			ctx := context.Background()
 
 			defer func(file *os.File) {
 				err := file.Close()
@@ -102,10 +104,12 @@ func TestFileStorage_Restore(t *testing.T) {
 			err := fs.file.Sync()
 			assert.NoError(t, err)
 
-			err = fs.Restore(ms)
+			err = fs.Restore(ctx, ms)
 			assert.NoError(t, err)
 			for _, v := range tt.wantData {
-				assert.Equal(t, *v.Value, ms.GetGaugeValue(v.ID))
+				val, err := ms.GetGaugeValue(ctx, v.ID)
+				assert.NoError(t, err)
+				assert.Equal(t, *v.Value, val)
 			}
 		})
 	}
@@ -122,6 +126,8 @@ func TestFileStorage_Sync(t *testing.T) {
 		fileStoragePath: "/tmp/fs_test",
 		restore:         false,
 	}
+
+	ctx := context.Background()
 
 	tests := []struct {
 		name    string
@@ -154,7 +160,7 @@ func TestFileStorage_Sync(t *testing.T) {
 				assert.NoError(t, err)
 			}(fs.file)
 
-			err := fs.Sync(&ms)
+			err := fs.Sync(ctx, &ms)
 			assert.NoError(t, err)
 
 			_, err = fs.file.Seek(0, io.SeekStart)

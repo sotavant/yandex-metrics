@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
@@ -51,7 +52,13 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 			return
 		}
 
-		respStruct := getMetricsStruct(appInstance.memStorage, m)
+		respStruct, err := getMetricsStruct(req.Context(), appInstance.memStorage, m)
+		if err != nil {
+			internal.Logger.Infow("error in get metric struct", "err", err)
+			http.Error(res, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(respStruct); err != nil {
@@ -61,7 +68,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 		}
 
 		if appInstance.fs.storeInterval == 0 {
-			if err := appInstance.fs.Sync(appInstance.memStorage); err != nil {
+			if err := appInstance.fs.Sync(req.Context(), appInstance.memStorage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -101,7 +108,13 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 			return
 		}
 
-		respStruct := getMetricsStruct(appInstance.memStorage, m)
+		respStruct, err := getMetricsStruct(req.Context(), appInstance.memStorage, m)
+		if err != nil {
+			internal.Logger.Infow("error in getMetricsStruct", "err", err)
+			http.Error(res, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(respStruct); err != nil {
@@ -114,17 +127,24 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 	}
 }
 
-func getMetricsStruct(storage repository.Storage, before internal.Metrics) internal.Metrics {
+func getMetricsStruct(ctx context.Context, storage repository.Storage, before internal.Metrics) (internal.Metrics, error) {
+	var err error
 	m := before
 
 	switch m.MType {
 	case internal.GaugeType:
-		gValue := storage.GetGaugeValue(m.ID)
+		gValue, err := storage.GetGaugeValue(ctx, m.ID)
+		if err != nil {
+			return m, err
+		}
 		m.Value = &gValue
 	case internal.CounterType:
-		cValue := storage.GetCounterValue(m.ID)
+		cValue, err := storage.GetCounterValue(ctx, m.ID)
+		if err != nil {
+			return m, err
+		}
 		m.Delta = &cValue
 	}
 
-	return m
+	return m, err
 }

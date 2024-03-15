@@ -12,6 +12,7 @@ const (
 	fileStoragePathVar = `FILE_STORAGE_PATH`
 	restoreVar         = `RESTORE`
 	databaseDSNVar     = `DATABASE_DSN`
+	tableNameVar       = `TABLE_NAME`
 )
 
 type config struct {
@@ -20,6 +21,7 @@ type config struct {
 	fileStoragePath string
 	restore         bool
 	databaseDSN     string
+	tableName       string
 }
 
 func initConfig() *config {
@@ -34,6 +36,7 @@ func (c *config) parseFlags() {
 	flag.UintVar(&c.storeInterval, "i", 300, "store interval")
 	flag.StringVar(&c.fileStoragePath, "f", "/tmp/metrics-db.json", "file storage path")
 	flag.StringVar(&c.databaseDSN, "d", "", "database DSN")
+	flag.StringVar(&c.tableName, "t", "", "table name")
 
 	flag.Parse()
 
@@ -65,5 +68,9 @@ func (c *config) parseFlags() {
 
 	if databaseDSN := os.Getenv(databaseDSNVar); databaseDSN != "" {
 		c.databaseDSN = databaseDSN
+	}
+
+	if tableName := os.Getenv(tableNameVar); tableName != "" {
+		c.tableName = tableNameVar
 	}
 }

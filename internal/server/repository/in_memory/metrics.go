@@ -72,20 +72,20 @@ func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bo
 	return false, nil
 }
 
-func (m *MetricsRepository) GetGauge(ctx context.Context) map[string]float64 {
-	return m.Gauge
+func (m *MetricsRepository) GetGauge(ctx context.Context) (map[string]float64, error) {
+	return m.Gauge, nil
 }
 
-func (m *MetricsRepository) GetGaugeValue(ctx context.Context, key string) float64 {
-	return m.Gauge[key]
+func (m *MetricsRepository) GetGaugeValue(ctx context.Context, key string) (float64, error) {
+	return m.Gauge[key], nil
 }
 
-func (m *MetricsRepository) GetCounters(ctx context.Context) map[string]int64 {
-	return m.Counter
+func (m *MetricsRepository) GetCounters(ctx context.Context) (map[string]int64, error) {
+	return m.Counter, nil
 }
 
-func (m *MetricsRepository) GetCounterValue(ctx context.Context, key string) int64 {
-	return m.Counter[key]
+func (m *MetricsRepository) GetCounterValue(ctx context.Context, key string) (int64, error) {
+	return m.Counter[key], nil
 }
 
 func NewMetricsRepository() *MetricsRepository {

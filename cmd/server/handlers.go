@@ -46,7 +46,7 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 		}
 
 		if appInstance.fs.storeInterval == 0 {
-			if err := appInstance.fs.Sync(appInstance.memStorage); err != nil {
+			if err := appInstance.fs.Sync(req.Context(), appInstance.memStorage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -99,8 +99,15 @@ func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Re
 	return func(w http.ResponseWriter, req *http.Request) {
 		var resp = ""
 
-		if len(appInstance.memStorage.GetGauge()) != 0 {
-			for k, v := range appInstance.memStorage.GetGauge() {
+		gaugeValues, err := appInstance.memStorage.GetGauge(req.Context())
+		if err != nil {
+			internal.Logger.Infow("get gauge values error", "err", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		if len(gaugeValues) != 0 {
+			for k, v := range gaugeValues {
 				resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, v), "0"), "."))
 			}
 		} else {
@@ -108,7 +115,7 @@ func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Re
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf8")
-		_, err := fmt.Fprint(w, resp)
+		_, err = fmt.Fprint(w, resp)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return

@@ -12,6 +12,7 @@ const (
 	counterType        = internal.CounterType
 	serverAddress      = "localhost:8080"
 	acceptableEncoding = "gzip"
+	tableName          = "metric"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer appInstance.syncFs()
+	defer appInstance.syncFs(ctx)
 
 	if appInstance.dbConn != nil {
 		defer func(dbConn *pgx.Conn, ctx context.Context) {
@@ -49,7 +50,7 @@ func main() {
 	}()
 
 	go func() {
-		if err = appInstance.fs.SyncByInterval(appInstance.memStorage, syncChan); err != nil {
+		if err = appInstance.fs.SyncByInterval(ctx, appInstance, syncChan); err != nil {
 			panic(err)
 		}
 	}()

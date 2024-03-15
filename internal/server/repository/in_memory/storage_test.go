@@ -159,8 +159,7 @@ func TestMemStorage_AddValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			tt.wantErr(t, m.AddValue(tt.args.metric), fmt.Sprintf("AddValue(%v)", tt.args.metric))
+			tt.wantErr(t, m.AddValue(context.Background(), tt.args.metric), fmt.Sprintf("AddValue(%v)", tt.args.metric))
 		})
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
@@ -34,7 +35,7 @@ func NewFileStorage(conf config) (*FileStorage, error) {
 	}, nil
 }
 
-func (fs *FileStorage) Restore(st repository.Storage) error {
+func (fs *FileStorage) Restore(ctx context.Context, st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
 
@@ -59,7 +60,7 @@ func (fs *FileStorage) Restore(st repository.Storage) error {
 			return err
 		}
 
-		if err = st.AddValue(m); err != nil {
+		if err = st.AddValue(ctx, m); err != nil {
 			return err
 		}
 	}
@@ -67,7 +68,7 @@ func (fs *FileStorage) Restore(st repository.Storage) error {
 	return nil
 }
 
-func (fs *FileStorage) Sync(st repository.Storage) error {
+func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
 
@@ -75,7 +76,12 @@ func (fs *FileStorage) Sync(st repository.Storage) error {
 		return err
 	}
 
-	for k, v := range st.GetGauge() {
+	gaugeValues, err := st.GetGauge(ctx)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range gaugeValues {
 		m := internal.Metrics{
 			ID:    k,
 			MType: internal.GaugeType,
@@ -88,7 +94,12 @@ func (fs *FileStorage) Sync(st repository.Storage) error {
 		}
 	}
 
-	for k, v := range st.GetCounters() {
+	counters, err := st.GetCounters(ctx)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range counters {
 		m := internal.Metrics{
 			ID:    k,
 			MType: internal.CounterType,
@@ -108,8 +119,8 @@ func (fs *FileStorage) Sync(st repository.Storage) error {
 	return nil
 }
 
-func (fs *FileStorage) SyncByInterval(st repository.Storage, ch chan bool) error {
-	if fs.storeInterval == 0 {
+func (fs *FileStorage) SyncByInterval(ctx context.Context, app *app, ch chan bool) error {
+	if fs.storeInterval == 0 || app.memStorage == nil {
 		close(ch)
 		return nil
 	}
@@ -123,7 +134,7 @@ func (fs *FileStorage) SyncByInterval(st repository.Storage, ch chan bool) error
 				return nil
 			default:
 				<-time.After(storeIntervalDuration)
-				if err := fs.Sync(st); err != nil {
+				if err := fs.Sync(ctx, app.memStorage); err != nil {
 					return err
 				}
 			}
