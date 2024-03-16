@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"

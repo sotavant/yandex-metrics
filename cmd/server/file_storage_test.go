@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
