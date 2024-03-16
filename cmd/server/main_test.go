@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +20,7 @@ func Test_badTypeHandler(t *testing.T) {
 	}
 	fs, _ := NewFileStorage(*conf)
 
-	storage := in_memory.NewMetricsRepository()
+	storage := memory.NewMetricsRepository()
 
 	appInstanse := &app{
 		config:  conf,

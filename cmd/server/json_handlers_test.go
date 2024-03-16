@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -21,7 +20,7 @@ func Test_updateJsonHandler(t *testing.T) {
 		fileStoragePath: "/tmp/fs_test",
 		restore:         false,
 	}
-	st := in_memory.NewMetricsRepository()
+	st := memory.NewMetricsRepository()
 	fs, err := NewFileStorage(conf)
 	assert.NoError(t, err)
 
@@ -122,7 +121,7 @@ func Test_updateJsonHandler(t *testing.T) {
 func Test_getValueJsonHandler(t *testing.T) {
 	appInstance := &app{
 		config:  nil,
-		storage: in_memory.NewMetricsRepository(),
+		storage: memory.NewMetricsRepository(),
 		fs:      nil,
 	}
 
@@ -212,7 +211,7 @@ func Test_getValueJsonHandler(t *testing.T) {
 func TestGzipCompression(t *testing.T) {
 	appInstance := &app{
 		config:  nil,
-		storage: in_memory.NewMetricsRepository(),
+		storage: memory.NewMetricsRepository(),
 		fs:      nil,
 	}
 	err := appInstance.storage.AddGaugeValue(context.Background(), "ss", -3444)

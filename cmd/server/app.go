@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
-	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
 )
 
@@ -26,7 +26,7 @@ func initApp(ctx context.Context) (*app, error) {
 	appInstance := new(app)
 
 	if dbConn == nil {
-		appInstance.storage = in_memory.NewMetricsRepository()
+		appInstance.storage = memory.NewMetricsRepository()
 		appInstance.fs, err = NewFileStorage(*conf)
 
 		if err != nil {
@@ -54,7 +54,7 @@ func (app *app) syncFs(ctx context.Context) {
 	needSync := false
 
 	switch app.storage.(type) {
-	case *in_memory.MetricsRepository:
+	case *memory.MetricsRepository:
 		needSync = true
 	}
 

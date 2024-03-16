@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
-	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
 	"github.com/stretchr/testify/assert"
@@ -163,7 +162,7 @@ func Test_getValueHandler(t *testing.T) {
 			} else if !tt.memory && conn == nil {
 				return
 			} else {
-				storage = in_memory.NewMetricsRepository()
+				storage = memory.NewMetricsRepository()
 			}
 
 			appInstance := &app{
@@ -268,7 +267,7 @@ func Test_getValuesHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			appInstance := &app{
 				config:  nil,
-				storage: in_memory.NewMetricsRepository(),
+				storage: memory.NewMetricsRepository(),
 				fs:      nil,
 			}
 
