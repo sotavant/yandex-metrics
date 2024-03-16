@@ -9,10 +9,9 @@ import (
 )
 
 const (
-	counterType        = internal.CounterType
 	serverAddress      = "localhost:8080"
 	acceptableEncoding = "gzip"
-	tableName          = "metric"
+	TableName          = "metric"
 )
 
 func main() {
@@ -50,6 +49,10 @@ func main() {
 	}()
 
 	go func() {
+		if appInstance.fs == nil {
+			close(syncChan)
+			return
+		}
 		if err = appInstance.fs.SyncByInterval(ctx, appInstance, syncChan); err != nil {
 			panic(err)
 		}

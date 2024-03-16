@@ -29,7 +29,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 				return
 			}
 
-			err := appInstance.memStorage.AddGaugeValue(req.Context(), m.ID, *m.Value)
+			err := appInstance.storage.AddGaugeValue(req.Context(), m.ID, *m.Value)
 			if err != nil {
 				internal.Logger.Infow("error in add value", "err", err)
 				http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -41,7 +41,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 				return
 			}
 
-			err := appInstance.memStorage.AddCounterValue(req.Context(), m.ID, *m.Delta)
+			err := appInstance.storage.AddCounterValue(req.Context(), m.ID, *m.Delta)
 			if err != nil {
 				internal.Logger.Infow("error in add counter value", "err", err)
 				http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -52,7 +52,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 			return
 		}
 
-		respStruct, err := getMetricsStruct(req.Context(), appInstance.memStorage, m)
+		respStruct, err := getMetricsStruct(req.Context(), appInstance.storage, m)
 		if err != nil {
 			internal.Logger.Infow("error in get metric struct", "err", err)
 			http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -67,8 +67,8 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 			return
 		}
 
-		if appInstance.fs.storeInterval == 0 {
-			if err := appInstance.fs.Sync(req.Context(), appInstance.memStorage); err != nil {
+		if appInstance.fs != nil && appInstance.fs.storeInterval == 0 {
+			if err = appInstance.fs.Sync(req.Context(), appInstance.storage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -96,7 +96,7 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 			return
 		}
 
-		exist, err := appInstance.memStorage.KeyExist(req.Context(), m.MType, m.ID)
+		exist, err := appInstance.storage.KeyExist(req.Context(), m.MType, m.ID)
 		if err != nil {
 			internal.Logger.Infow("error in encode")
 			http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -108,7 +108,7 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 			return
 		}
 
-		respStruct, err := getMetricsStruct(req.Context(), appInstance.memStorage, m)
+		respStruct, err := getMetricsStruct(req.Context(), appInstance.storage, m)
 		if err != nil {
 			internal.Logger.Infow("error in getMetricsStruct", "err", err)
 			http.Error(res, "internal server error", http.StatusInternalServerError)

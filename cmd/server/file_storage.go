@@ -120,7 +120,7 @@ func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 }
 
 func (fs *FileStorage) SyncByInterval(ctx context.Context, app *app, ch chan bool) error {
-	if fs.storeInterval == 0 || app.memStorage == nil {
+	if fs.storeInterval == 0 {
 		close(ch)
 		return nil
 	}
@@ -134,7 +134,7 @@ func (fs *FileStorage) SyncByInterval(ctx context.Context, app *app, ch chan boo
 				return nil
 			default:
 				<-time.After(storeIntervalDuration)
-				if err := fs.Sync(ctx, app.memStorage); err != nil {
+				if err := fs.Sync(ctx, app.storage); err != nil {
 					return err
 				}
 			}

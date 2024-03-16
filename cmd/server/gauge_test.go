@@ -72,9 +72,9 @@ func Test_handleGauge(t *testing.T) {
 			assert.NoError(t, err)
 
 			appInstance := &app{
-				config:     &conf,
-				memStorage: tt.storage,
-				fs:         fs,
+				config:  &conf,
+				storage: tt.storage,
+				fs:      fs,
 			}
 
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)

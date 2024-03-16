@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -24,7 +25,7 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 				return
 			}
 
-			err = appInstance.memStorage.AddGaugeValue(req.Context(), mName, val)
+			err = appInstance.storage.AddGaugeValue(req.Context(), mName, val)
 			if err != nil {
 				http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
@@ -35,7 +36,7 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 				http.Error(res, "bad request", http.StatusBadRequest)
 			}
 
-			err = appInstance.memStorage.AddCounterValue(req.Context(), mName, val)
+			err = appInstance.storage.AddCounterValue(req.Context(), mName, val)
 			if err != nil {
 				http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
@@ -45,8 +46,8 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 			return
 		}
 
-		if appInstance.fs.storeInterval == 0 {
-			if err := appInstance.fs.Sync(req.Context(), appInstance.memStorage); err != nil {
+		if appInstance.fs != nil && appInstance.fs.storeInterval == 0 {
+			if err := appInstance.fs.Sync(req.Context(), appInstance.storage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -68,7 +69,7 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 			return
 		}
 
-		value, err := appInstance.memStorage.GetValue(req.Context(), mType, mName)
+		value, err := appInstance.storage.GetValue(req.Context(), mType, mName)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -99,7 +100,7 @@ func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Re
 	return func(w http.ResponseWriter, req *http.Request) {
 		var resp = ""
 
-		gaugeValues, err := appInstance.memStorage.GetGauge(req.Context())
+		gaugeValues, err := appInstance.storage.GetGauge(req.Context())
 		if err != nil {
 			internal.Logger.Infow("get gauge values error", "err", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -107,8 +108,15 @@ func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Re
 		}
 
 		if len(gaugeValues) != 0 {
-			for k, v := range gaugeValues {
-				resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, v), "0"), "."))
+			keys := make([]string, 0, len(gaugeValues))
+			for k := range gaugeValues {
+				keys = append(keys, k)
+			}
+
+			sort.Strings(keys)
+
+			for _, k := range keys {
+				resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, gaugeValues[k]), "0"), "."))
 			}
 		} else {
 			resp = "no value"

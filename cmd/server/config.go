@@ -36,7 +36,7 @@ func (c *config) parseFlags() {
 	flag.UintVar(&c.storeInterval, "i", 300, "store interval")
 	flag.StringVar(&c.fileStoragePath, "f", "/tmp/metrics-db.json", "file storage path")
 	flag.StringVar(&c.databaseDSN, "d", "", "database DSN")
-	flag.StringVar(&c.tableName, "t", "", "table name")
+	flag.StringVar(&c.tableName, "t", TableName, "table name")
 
 	flag.Parse()
 
@@ -70,7 +70,7 @@ func (c *config) parseFlags() {
 		c.databaseDSN = databaseDSN
 	}
 
-	if tableName := os.Getenv(tableNameVar); tableName != "" {
-		c.tableName = tableNameVar
+	if tblName := os.Getenv(tableNameVar); tblName != "" {
+		c.tableName = tblName
 	}
 }

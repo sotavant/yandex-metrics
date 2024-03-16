@@ -5,16 +5,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
 )
 
 type app struct {
-	config     *config
-	memStorage *in_memory.MetricsRepository
-	dbStorage  *postgres.MetricsRepository
-	fs         *FileStorage
-	dbConn     *pgx.Conn
+	config  *config
+	storage repository.Storage
+	fs      *FileStorage
+	dbConn  *pgx.Conn
 }
 
 func initApp(ctx context.Context) (*app, error) {
@@ -26,33 +26,43 @@ func initApp(ctx context.Context) (*app, error) {
 	appInstance := new(app)
 
 	if dbConn == nil {
-		appInstance.memStorage = in_memory.NewMetricsRepository()
+		appInstance.storage = in_memory.NewMetricsRepository()
 		appInstance.fs, err = NewFileStorage(*conf)
 
 		if err != nil {
 			panic(err)
 		}
 
-		if err = appInstance.fs.Restore(ctx, appInstance.memStorage); err != nil {
+		if err = appInstance.fs.Restore(ctx, appInstance.storage); err != nil {
 			panic(err)
 		}
 	} else {
-		appInstance.dbStorage, err = postgres.NewMemStorage(ctx, dbConn, conf.tableName)
+		appInstance.storage, err = postgres.NewMemStorage(ctx, dbConn, conf.tableName)
 
 		if err != nil {
 			panic(err)
 		}
 	}
 
+	appInstance.config = conf
+	appInstance.dbConn = dbConn
+
 	return appInstance, nil
 }
 
 func (app *app) syncFs(ctx context.Context) {
-	if app.memStorage == nil {
+	needSync := false
+
+	switch app.storage.(type) {
+	case *in_memory.MetricsRepository:
+		needSync = true
+	}
+
+	if !needSync {
 		return
 	}
 
-	err := app.fs.Sync(ctx, app.memStorage)
+	err := app.fs.Sync(ctx, app.storage)
 	if err != nil {
 		panic(err)
 	}

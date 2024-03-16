@@ -26,9 +26,9 @@ func Test_updateJsonHandler(t *testing.T) {
 	assert.NoError(t, err)
 
 	appInstance := &app{
-		config:     &conf,
-		memStorage: st,
-		fs:         fs,
+		config:  &conf,
+		storage: st,
+		fs:      fs,
 	}
 
 	handler := updateJSONHandler(appInstance)
@@ -121,14 +121,14 @@ func Test_updateJsonHandler(t *testing.T) {
 
 func Test_getValueJsonHandler(t *testing.T) {
 	appInstance := &app{
-		config:     nil,
-		memStorage: in_memory.NewMetricsRepository(),
-		fs:         nil,
+		config:  nil,
+		storage: in_memory.NewMetricsRepository(),
+		fs:      nil,
 	}
 
-	err := appInstance.memStorage.AddGaugeValue(context.Background(), "ss", -3444)
+	err := appInstance.storage.AddGaugeValue(context.Background(), "ss", -3444)
 	assert.NoError(t, err)
-	err = appInstance.memStorage.AddCounterValue(context.Background(), "ss", 3)
+	err = appInstance.storage.AddCounterValue(context.Background(), "ss", 3)
 	assert.NoError(t, err)
 	handler := getValueJSONHandler(appInstance)
 
@@ -211,13 +211,13 @@ func Test_getValueJsonHandler(t *testing.T) {
 
 func TestGzipCompression(t *testing.T) {
 	appInstance := &app{
-		config:     nil,
-		memStorage: in_memory.NewMetricsRepository(),
-		fs:         nil,
+		config:  nil,
+		storage: in_memory.NewMetricsRepository(),
+		fs:      nil,
 	}
-	err := appInstance.memStorage.AddGaugeValue(context.Background(), "ss", -3444)
+	err := appInstance.storage.AddGaugeValue(context.Background(), "ss", -3444)
 	assert.NoError(t, err)
-	err = appInstance.memStorage.AddCounterValue(context.Background(), "ss", 3)
+	err = appInstance.storage.AddCounterValue(context.Background(), "ss", 3)
 	assert.NoError(t, err)
 	requestBody := `{"id":"ss","type":"counter","delta":3}
 `

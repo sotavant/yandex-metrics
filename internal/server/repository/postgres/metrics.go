@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"strings"
 )
 
 type MetricsRepository struct {
@@ -19,7 +20,7 @@ func NewMemStorage(ctx context.Context, conn *pgx.Conn, tableName string) (*Metr
 		return nil, fmt.Errorf("error in ping: %s", err)
 	}
 
-	err = createTable(ctx, *conn, tableName)
+	err = CreateTable(ctx, *conn, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("error in creating table: %s", err)
 	}
@@ -27,48 +28,48 @@ func NewMemStorage(ctx context.Context, conn *pgx.Conn, tableName string) (*Metr
 	return &MetricsRepository{conn, tableName}, nil
 }
 
-func createTable(ctx context.Context, conn pgx.Conn, tableName string) error {
-	query := `create table if not exists $1
+func CreateTable(ctx context.Context, conn pgx.Conn, tableName string) error {
+	query := strings.ReplaceAll(`create table if not exists #T
 		(
 			id    varchar not null,
 			type  varchar not null,
 			delta integer,
 			value double precision,
-			constraint $2
+			constraint #T_pk
 				unique (id, type)
-		);`
+		);`, "#T", tableName)
 
-	_, err := conn.Exec(ctx, query, tableName, tableName+"_pk")
+	_, err := conn.Exec(ctx, query)
 
 	return err
 }
 
 func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value float64) error {
-	query := `insert into $4 (id, type, value)
+	query := m.setTableName(`insert into #T# (id, type, value)
 		values ($1, $2, $3)
-		on conflict do update set id = $1, type = $2, value = $3;`
+		on conflict on constraint #T#_pk do update set id = $1, type = $2, value = $3;`)
 
-	_, err := m.conn.Exec(ctx, query, key, internal.GaugeType, value, m.tableName)
+	_, err := m.conn.Exec(ctx, query, key, internal.GaugeType, value)
 
 	return err
 }
 
 func (m *MetricsRepository) AddCounterValue(ctx context.Context, key string, value int64) error {
 	var delta int64
-	selectQuery := `select delta from $3 where type = $1 and id = $2`
-	insertQuery := `insert into $1 (id, type, delta) values ($2, $3, $4)`
-	updateQuery := `update $1 set delta = $2 where key = $3 and type = $4`
+	selectQuery := m.setTableName(`select delta from #T# where type = $1 and id = $2`)
+	insertQuery := m.setTableName(`insert into #T# (id, type, delta) values ($1, $2, $3)`)
+	updateQuery := m.setTableName(`update #T# set delta = $1 where id = $2 and type = $3`)
 
 	err := m.conn.QueryRow(ctx, selectQuery, internal.CounterType, key).Scan(&delta)
-	switch err {
-	case nil:
-		_, err = m.conn.Exec(ctx, updateQuery, m.tableName, value+delta, key, internal.CounterType)
+	switch {
+	case err == nil:
+		_, err = m.conn.Exec(ctx, updateQuery, value+delta, key, internal.CounterType)
 		if err != nil {
 			internal.Logger.Infow("error in update", "err", err)
 			return err
 		}
-	case pgx.ErrNoRows:
-		_, err = m.conn.Exec(ctx, insertQuery, m.tableName, key, internal.CounterType, value)
+	case errors.Is(err, pgx.ErrNoRows):
+		_, err = m.conn.Exec(ctx, insertQuery, key, internal.CounterType, value)
 		if err != nil {
 			internal.Logger.Infow("error in insert", "err", err)
 			return err
@@ -101,13 +102,15 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 	var value float64
 	var err error
 
-	query := `select $1 from $2 where type = $3 and key = $4`
+	query := m.setTableName(`select #F# from #T# where type = $1 and id = $2`)
 
 	switch mType {
 	case internal.CounterType:
-		err = m.conn.QueryRow(ctx, query, "delta", m.tableName, internal.CounterType, key).Scan(&delta)
+		query = strings.ReplaceAll(query, "#F#", "delta")
+		err = m.conn.QueryRow(ctx, query, internal.CounterType, key).Scan(&delta)
 	case internal.GaugeType:
-		err = m.conn.QueryRow(ctx, query, "value", m.tableName, internal.GaugeType, key).Scan(&value)
+		query = strings.ReplaceAll(query, "#F#", "value")
+		err = m.conn.QueryRow(ctx, query, internal.GaugeType, key).Scan(&value)
 	default:
 		return nil, nil
 	}
@@ -133,9 +136,9 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bool, error) {
 	var count int
 
-	query := `select count(*) from $1 where type = $2 and key = $3 limit 1`
+	query := m.setTableName(`select count(*) from #T# where type = $1 and id = $2 limit 1`)
 
-	err := m.conn.QueryRow(ctx, query, m.tableName, mType, key).Scan(&count)
+	err := m.conn.QueryRow(ctx, query, mType, key).Scan(&count)
 
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		internal.Logger.Infow("error in select count", "err", err)
@@ -147,9 +150,9 @@ func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bo
 
 func (m *MetricsRepository) GetGauge(ctx context.Context) (map[string]float64, error) {
 	res := make(map[string]float64)
-	query := `select key, value from $1 where type = $2`
+	query := m.setTableName(`select id, value from #T# where type = $1`)
 
-	rows, err := m.conn.Query(ctx, query, m.tableName, internal.GaugeType)
+	rows, err := m.conn.Query(ctx, query, internal.GaugeType)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		internal.Logger.Infow("error in select rows", "err", err)
 		return nil, err
@@ -183,9 +186,9 @@ func (m *MetricsRepository) GetGaugeValue(ctx context.Context, key string) (floa
 
 func (m *MetricsRepository) GetCounters(ctx context.Context) (map[string]int64, error) {
 	res := make(map[string]int64)
-	query := `select key, delta from $1 where type = $2`
+	query := m.setTableName(`select id, delta from #T# where type = $1`)
 
-	rows, err := m.conn.Query(ctx, query, m.tableName, internal.CounterType)
+	rows, err := m.conn.Query(ctx, query, internal.CounterType)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		internal.Logger.Infow("error in select rows", "err", err)
 		return nil, err
@@ -215,4 +218,8 @@ func (m *MetricsRepository) GetCounterValue(ctx context.Context, key string) (in
 	default:
 		return 0, errors.New("unknown type of result")
 	}
+}
+
+func (m *MetricsRepository) setTableName(query string) string {
+	return strings.ReplaceAll(query, "#T#", m.tableName)
 }

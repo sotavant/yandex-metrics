@@ -24,9 +24,9 @@ func Test_badTypeHandler(t *testing.T) {
 	storage := in_memory.NewMetricsRepository()
 
 	appInstanse := &app{
-		config:     conf,
-		memStorage: storage,
-		fs:         fs,
+		config:  conf,
+		storage: storage,
+		fs:      fs,
 	}
 
 	tests := []struct {

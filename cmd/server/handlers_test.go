@@ -3,12 +3,17 @@ package main
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/in_memory"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -16,6 +21,20 @@ func Test_getValueHandler(t *testing.T) {
 	type want struct {
 		status int
 		value  string
+	}
+
+	ctx := context.Background()
+	conn, tableName, err := test.InitConnection(ctx, t)
+	assert.NoError(t, err)
+
+	if conn != nil {
+		defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+			err = test.DropTable(ctx, conn, tableName)
+			assert.NoError(t, err)
+
+			err = conn.Close(ctx)
+			assert.NoError(t, err)
+		}(ctx, *conn, tableName)
 	}
 
 	tests := []struct {
@@ -27,6 +46,7 @@ func Test_getValueHandler(t *testing.T) {
 		gaugeValue    float64
 		want          want
 		request       string
+		memory        bool
 	}{
 		{
 			name:          "getExistCounterValue",
@@ -39,6 +59,7 @@ func Test_getValueHandler(t *testing.T) {
 				value  string
 			}{status: http.StatusOK, value: `3`},
 			request: `/value/counter/ss`,
+			memory:  true,
 		},
 		{
 			name:          "getAbsentCounterValue",
@@ -50,6 +71,7 @@ func Test_getValueHandler(t *testing.T) {
 				value  string
 			}{status: http.StatusNotFound},
 			request: `/value/counter/ss`,
+			memory:  true,
 		},
 		{
 			name:          "getExistGaugeValue",
@@ -63,6 +85,7 @@ func Test_getValueHandler(t *testing.T) {
 				value  string
 			}{status: http.StatusOK, value: `3`},
 			request: `/value/gauge/ss`,
+			memory:  true,
 		},
 		{
 			name:          "getAbsentGaugeValue",
@@ -74,23 +97,86 @@ func Test_getValueHandler(t *testing.T) {
 				value  string
 			}{status: http.StatusNotFound},
 			request: `/value/gauge/ss`,
+			memory:  true,
+		},
+		{
+			name:          "getExistCounterValuePG",
+			mType:         internal.CounterType,
+			mName:         `ss`,
+			ctxMetricName: `ss`,
+			counterValue:  3,
+			want: struct {
+				status int
+				value  string
+			}{status: http.StatusOK, value: `3`},
+			request: `/value/counter/ss`,
+			memory:  false,
+		},
+		{
+			name:          "getAbsentCounterValuePG",
+			mType:         internal.CounterType,
+			mName:         `ss`,
+			ctxMetricName: `sss`,
+			want: struct {
+				status int
+				value  string
+			}{status: http.StatusNotFound},
+			request: `/value/counter/ss`,
+			memory:  false,
+		},
+		{
+			name:          "getExistGaugeValuePG",
+			mType:         internal.GaugeType,
+			mName:         `ss`,
+			ctxMetricName: `ss`,
+			counterValue:  3,
+			gaugeValue:    3,
+			want: struct {
+				status int
+				value  string
+			}{status: http.StatusOK, value: `3`},
+			request: `/value/gauge/ss`,
+			memory:  false,
+		},
+		{
+			name:          "getAbsentGaugeValuePG",
+			mType:         internal.GaugeType,
+			mName:         `ss`,
+			ctxMetricName: `sss`,
+			want: struct {
+				status int
+				value  string
+			}{status: http.StatusNotFound},
+			request: `/value/gauge/ss`,
+			memory:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var storage repository.Storage
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
+
+			if conn != nil && !tt.memory {
+				storage, err = postgres.NewMemStorage(ctx, conn, tableName)
+				assert.NoError(t, err)
+			} else if !tt.memory && conn == nil {
+				return
+			} else {
+				storage = in_memory.NewMetricsRepository()
+			}
+
 			appInstance := &app{
-				config:     nil,
-				memStorage: in_memory.NewMetricsRepository(),
-				fs:         nil,
+				config:  nil,
+				storage: storage,
+				fs:      nil,
 			}
 
 			if tt.mType == internal.CounterType {
-				err := appInstance.memStorage.AddCounterValue(request.Context(), tt.mName, tt.counterValue)
+				err := appInstance.storage.AddCounterValue(request.Context(), tt.mName, tt.counterValue)
 				assert.NoError(t, err)
 			} else {
-				err := appInstance.memStorage.AddGaugeValue(request.Context(), tt.mName, tt.gaugeValue)
+				err := appInstance.storage.AddGaugeValue(request.Context(), tt.mName, tt.gaugeValue)
 				assert.NoError(t, err)
 			}
 
@@ -110,7 +196,7 @@ func Test_getValueHandler(t *testing.T) {
 
 			assert.Equal(t, tt.want.status, result.StatusCode)
 
-			if tt.name != `getAbsentCounterValue` && tt.name != `getAbsentGaugeValue` {
+			if !strings.Contains(tt.name, `getAbsentCounterValue`) && !strings.Contains(tt.name, `getAbsentGaugeValue`) {
 				bodyBytes, err := io.ReadAll(result.Body)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.want.value, string(bodyBytes))
@@ -173,7 +259,7 @@ func Test_getValuesHandler(t *testing.T) {
 				status int
 				value  string
 				//}{status: http.StatusOK, value: `<p>pp: -456.123</p><p>ss: 134.456</p>`},
-			}{status: http.StatusOK, value: `<p>ss: 134.456</p><p>pp: -456.123</p>`},
+			}{status: http.StatusOK, value: `<p>pp: -456.123</p><p>ss: 134.456</p>`},
 		},
 	}
 	for _, tt := range tests {
@@ -181,13 +267,13 @@ func Test_getValuesHandler(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/", nil)
 			w := httptest.NewRecorder()
 			appInstance := &app{
-				config:     nil,
-				memStorage: in_memory.NewMetricsRepository(),
-				fs:         nil,
+				config:  nil,
+				storage: in_memory.NewMetricsRepository(),
+				fs:      nil,
 			}
 
 			for _, v := range tt.values {
-				err := appInstance.memStorage.AddGaugeValue(request.Context(), v.key, v.value)
+				err := appInstance.storage.AddGaugeValue(request.Context(), v.key, v.value)
 				assert.NoError(t, err)
 			}
 
@@ -216,6 +302,7 @@ func Test_pingDBHandler(t *testing.T) {
 	if conf.databaseDSN == "" {
 		return
 	}
+
 	tests := []struct {
 		name       string
 		conf       *config
