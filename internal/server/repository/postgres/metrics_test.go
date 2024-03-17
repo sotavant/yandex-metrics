@@ -79,6 +79,7 @@ func TestMetricsRepository_AddCounterValue(t *testing.T) {
 		key   string
 		value int64
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -101,6 +102,15 @@ func TestMetricsRepository_AddCounterValue(t *testing.T) {
 				value: 3,
 			},
 			want: 6,
+		},
+		{
+			name: "insert big value",
+			args: args{
+				ctx:   ctx,
+				key:   "ss",
+				value: 2544985532,
+			},
+			want: 2544985538,
 		},
 	}
 	for _, tt := range tests {

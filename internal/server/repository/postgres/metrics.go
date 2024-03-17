@@ -33,7 +33,7 @@ func CreateTable(ctx context.Context, conn pgx.Conn, tableName string) error {
 		(
 			id    varchar not null,
 			type  varchar not null,
-			delta integer,
+			delta int8,
 			value double precision,
 			constraint #T_pk
 				unique (id, type)
