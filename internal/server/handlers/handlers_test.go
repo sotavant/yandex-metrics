@@ -1,10 +1,11 @@
-package main
+package handlers
 
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
@@ -166,17 +167,17 @@ func Test_getValueHandler(t *testing.T) {
 				storage = memory.NewMetricsRepository()
 			}
 
-			appInstance := &app{
-				config:  nil,
-				storage: storage,
-				fs:      nil,
+			appInstance := &server.App{
+				Config:  nil,
+				Storage: storage,
+				Fs:      nil,
 			}
 
 			if tt.mType == internal.CounterType {
-				err := appInstance.storage.AddCounterValue(request.Context(), tt.mName, tt.counterValue)
+				err := appInstance.Storage.AddCounterValue(request.Context(), tt.mName, tt.counterValue)
 				assert.NoError(t, err)
 			} else {
-				err := appInstance.storage.AddGaugeValue(request.Context(), tt.mName, tt.gaugeValue)
+				err := appInstance.Storage.AddGaugeValue(request.Context(), tt.mName, tt.gaugeValue)
 				assert.NoError(t, err)
 			}
 
@@ -186,7 +187,7 @@ func Test_getValueHandler(t *testing.T) {
 
 			request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
-			h := http.HandlerFunc(getValueHandler(appInstance))
+			h := http.HandlerFunc(GetValueHandler(appInstance))
 			h(w, request)
 			result := w.Result()
 			defer func() {
@@ -266,18 +267,18 @@ func Test_getValuesHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/", nil)
 			w := httptest.NewRecorder()
-			appInstance := &app{
-				config:  nil,
-				storage: memory.NewMetricsRepository(),
-				fs:      nil,
+			appInstance := &server.App{
+				Config:  nil,
+				Storage: memory.NewMetricsRepository(),
+				Fs:      nil,
 			}
 
 			for _, v := range tt.values {
-				err := appInstance.storage.AddGaugeValue(request.Context(), v.key, v.value)
+				err := appInstance.Storage.AddGaugeValue(request.Context(), v.key, v.value)
 				assert.NoError(t, err)
 			}
 
-			h := http.HandlerFunc(getValuesHandler(appInstance))
+			h := http.HandlerFunc(GetValuesHandler(appInstance))
 			h(w, request)
 			result := w.Result()
 			defer func() {
@@ -297,20 +298,20 @@ func Test_getValuesHandler(t *testing.T) {
 func Test_pingDBHandler(t *testing.T) {
 	ctx := context.Background()
 	internal.InitLogger()
-	conf := initConfig()
+	conf := server.InitConfig()
 
-	if conf.databaseDSN == "" {
+	if conf.DatabaseDSN == "" {
 		return
 	}
 
 	tests := []struct {
 		name       string
-		conf       *config
+		conf       *server.Config
 		wantStatus int
 	}{
 		{
 			name:       "emptyDsn",
-			conf:       &config{databaseDSN: ""},
+			conf:       &server.Config{DatabaseDSN: ""},
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
@@ -321,8 +322,8 @@ func Test_pingDBHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dbConn := initDB(ctx, *tt.conf)
-			h := http.HandlerFunc(pingDBHandler(dbConn))
+			dbConn := server.InitDB(ctx, *tt.conf)
+			h := http.HandlerFunc(PingDBHandler(dbConn))
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
 			w := httptest.NewRecorder()
 			h(w, request)

@@ -2,38 +2,23 @@ package main
 
 import (
 	"context"
-	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
 	"net/http"
 	"sync"
-)
-
-const (
-	serverAddress      = "localhost:8080"
-	acceptableEncoding = "gzip"
-	TableName          = "metric"
 )
 
 func main() {
 	ctx := context.Background()
 	internal.InitLogger()
 
-	appInstance, err := initApp(ctx)
+	appInstance, err := server.InitApp(ctx)
 	if err != nil {
 		panic(err)
 	}
-	defer appInstance.syncFs(ctx)
+	defer appInstance.SyncFs(ctx)
 
-	if appInstance.dbConn != nil {
-		defer func(dbConn *pgx.Conn, ctx context.Context) {
-			err := dbConn.Close(ctx)
-			if err != nil {
-				panic("error in close dbConn")
-			}
-		}(appInstance.dbConn, ctx)
-	}
-
-	r := appInstance.initRouters()
+	r := appInstance.InitRouters()
 
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)
@@ -41,7 +26,7 @@ func main() {
 	wg.Add(2)
 
 	go func() {
-		err = http.ListenAndServe(appInstance.config.addr, r)
+		err = http.ListenAndServe(appInstance.Config.Addr, r)
 		if err != nil {
 			close(httpChan)
 			panic(err)
@@ -49,11 +34,11 @@ func main() {
 	}()
 
 	go func() {
-		if appInstance.fs == nil {
+		if appInstance.Fs == nil {
 			close(syncChan)
 			return
 		}
-		if err = appInstance.fs.SyncByInterval(ctx, appInstance, syncChan); err != nil {
+		if err = appInstance.Fs.SyncByInterval(ctx, appInstance, syncChan); err != nil {
 			panic(err)
 		}
 	}()

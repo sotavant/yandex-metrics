@@ -1,8 +1,9 @@
-package main
+package storage
 
 import (
 	"context"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -11,11 +12,11 @@ import (
 )
 
 func TestFileStorage_Restore(t *testing.T) {
-	conf := config{
-		addr:            "",
-		storeInterval:   0,
-		fileStoragePath: "/tmp/fs_test",
-		restore:         false,
+	conf := server.Config{
+		Addr:            "",
+		StoreInterval:   0,
+		FileStoragePath: "/tmp/fs_test",
+		Restore:         false,
 	}
 
 	tests := []struct {
@@ -92,16 +93,16 @@ func TestFileStorage_Restore(t *testing.T) {
 				err := file.Close()
 				assert.NoError(t, err)
 
-				err = os.Remove(conf.fileStoragePath)
+				err = os.Remove(conf.FileStoragePath)
 				assert.NoError(t, err)
-			}(fs.file)
+			}(fs.File)
 
 			for _, v := range tt.data {
-				_, err := fs.file.WriteString(v)
+				_, err := fs.File.WriteString(v)
 				assert.NoError(t, err)
 			}
 
-			err := fs.file.Sync()
+			err := fs.File.Sync()
 			assert.NoError(t, err)
 
 			err = fs.Restore(ctx, ms)
@@ -120,11 +121,11 @@ func getFloat64Pointer(num float64) *float64 {
 }
 
 func TestFileStorage_Sync(t *testing.T) {
-	conf := config{
-		addr:            "",
-		storeInterval:   0,
-		fileStoragePath: "/tmp/fs_test",
-		restore:         false,
+	conf := server.Config{
+		Addr:            "",
+		StoreInterval:   0,
+		FileStoragePath: "/tmp/fs_test",
+		Restore:         false,
 	}
 
 	ctx := context.Background()
@@ -156,17 +157,17 @@ func TestFileStorage_Sync(t *testing.T) {
 				err := file.Close()
 				assert.NoError(t, err)
 
-				err = os.Remove(conf.fileStoragePath)
+				err = os.Remove(conf.FileStoragePath)
 				assert.NoError(t, err)
-			}(fs.file)
+			}(fs.File)
 
 			err := fs.Sync(ctx, &ms)
 			assert.NoError(t, err)
 
-			_, err = fs.file.Seek(0, io.SeekStart)
+			_, err = fs.File.Seek(0, io.SeekStart)
 			assert.NoError(t, err)
 
-			data, err := os.ReadFile(fs.file.Name())
+			data, err := os.ReadFile(fs.File.Name())
 			assert.NoError(t, err)
 			for _, str := range tt.want {
 				assert.Contains(t, string(data), str)

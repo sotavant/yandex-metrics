@@ -1,10 +1,12 @@
-package main
+package server
 
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/handlers"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
+	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -17,11 +19,11 @@ func Test_handleGauge(t *testing.T) {
 		value       float64
 	}
 
-	conf := config{
-		addr:            "",
-		storeInterval:   0,
-		fileStoragePath: "/tmp/fs_test",
-		restore:         false,
+	conf := Config{
+		Addr:            "",
+		StoreInterval:   0,
+		FileStoragePath: "/tmp/fs_test",
+		Restore:         false,
 	}
 
 	tests := []struct {
@@ -68,13 +70,13 @@ func Test_handleGauge(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fs, err := NewFileStorage(conf)
+			fs, err := storage.NewFileStorage(conf)
 			assert.NoError(t, err)
 
-			appInstance := &app{
-				config:  &conf,
-				storage: tt.storage,
-				fs:      fs,
+			appInstance := &App{
+				Config:  &conf,
+				Storage: tt.storage,
+				Fs:      fs,
 			}
 
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
@@ -87,7 +89,7 @@ func Test_handleGauge(t *testing.T) {
 
 			request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
-			h := http.HandlerFunc(updateHandler(appInstance))
+			h := http.HandlerFunc(handlers.UpdateHandler(appInstance))
 			h(w, request)
 			result := w.Result()
 			defer func() {

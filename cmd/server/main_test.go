@@ -1,7 +1,10 @@
 package main
 
 import (
+	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/handlers"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
+	storage2 "github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -13,20 +16,20 @@ func Test_badTypeHandler(t *testing.T) {
 		responseStatus int
 	}
 
-	conf := &config{
-		addr:            "",
-		storeInterval:   0,
-		fileStoragePath: "/tmp/fs_test",
-		restore:         false,
+	conf := &server.Config{
+		Addr:            "",
+		StoreInterval:   0,
+		FileStoragePath: "/tmp/fs_test",
+		Restore:         false,
 	}
-	fs, _ := NewFileStorage(*conf)
+	fs, _ := storage2.NewFileStorage(*conf)
 
 	storage := memory.NewMetricsRepository()
 
-	appInstanse := &app{
-		config:  conf,
-		storage: storage,
-		fs:      fs,
+	appInstanse := &server.App{
+		Config:  conf,
+		Storage: storage,
+		Fs:      fs,
 	}
 
 	tests := []struct {
@@ -46,7 +49,7 @@ func Test_badTypeHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(updateHandler(appInstanse))
+			h := http.HandlerFunc(handlers.UpdateHandler(appInstanse))
 			h(w, request)
 			result := w.Result()
 			defer func() {

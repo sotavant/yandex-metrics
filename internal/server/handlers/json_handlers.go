@@ -1,14 +1,15 @@
-package main
+package handlers
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"net/http"
 )
 
-func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
+func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 
@@ -29,7 +30,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 				return
 			}
 
-			err := appInstance.storage.AddGaugeValue(req.Context(), m.ID, *m.Value)
+			err := appInstance.Storage.AddGaugeValue(req.Context(), m.ID, *m.Value)
 			if err != nil {
 				internal.Logger.Infow("error in add value", "err", err)
 				http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -41,7 +42,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 				return
 			}
 
-			err := appInstance.storage.AddCounterValue(req.Context(), m.ID, *m.Delta)
+			err := appInstance.Storage.AddCounterValue(req.Context(), m.ID, *m.Delta)
 			if err != nil {
 				internal.Logger.Infow("error in add counter value", "err", err)
 				http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -52,7 +53,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 			return
 		}
 
-		respStruct, err := getMetricsStruct(req.Context(), appInstance.storage, m)
+		respStruct, err := getMetricsStruct(req.Context(), appInstance.Storage, m)
 		if err != nil {
 			internal.Logger.Infow("error in get metric struct", "err", err)
 			http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -67,8 +68,8 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 			return
 		}
 
-		if appInstance.fs != nil && appInstance.fs.storeInterval == 0 {
-			if err = appInstance.fs.Sync(req.Context(), appInstance.storage); err != nil {
+		if appInstance.Fs != nil && appInstance.Fs.StoreInterval == 0 {
+			if err = appInstance.Fs.Sync(req.Context(), appInstance.Storage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -79,7 +80,7 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 	}
 }
 
-func updateBatchJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
+func UpdateBatchJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m []internal.Metrics
 
@@ -93,14 +94,14 @@ func updateBatchJSONHandler(appInstance *app) func(res http.ResponseWriter, req 
 			return
 		}
 
-		err := appInstance.storage.AddValues(req.Context(), m)
+		err := appInstance.Storage.AddValues(req.Context(), m)
 		if err != nil {
 			internal.Logger.Infow("error in addValues", "err", err)
 			http.Error(res, "internal server error", http.StatusInternalServerError)
 			return
 		}
 
-		metrics, err := appInstance.storage.GetValues(req.Context())
+		metrics, err := appInstance.Storage.GetValues(req.Context())
 		if err != nil {
 			internal.Logger.Infow("error in get metrics", "err", err)
 			http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -115,8 +116,8 @@ func updateBatchJSONHandler(appInstance *app) func(res http.ResponseWriter, req 
 			return
 		}
 
-		if appInstance.fs != nil && appInstance.fs.storeInterval == 0 {
-			if err = appInstance.fs.Sync(req.Context(), appInstance.storage); err != nil {
+		if appInstance.Fs != nil && appInstance.Fs.StoreInterval == 0 {
+			if err = appInstance.Fs.Sync(req.Context(), appInstance.Storage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -127,7 +128,7 @@ func updateBatchJSONHandler(appInstance *app) func(res http.ResponseWriter, req 
 	}
 }
 
-func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
+func GetValueJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 
@@ -144,7 +145,7 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 			return
 		}
 
-		exist, err := appInstance.storage.KeyExist(req.Context(), m.MType, m.ID)
+		exist, err := appInstance.Storage.KeyExist(req.Context(), m.MType, m.ID)
 		if err != nil {
 			internal.Logger.Infow("error in encode")
 			http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -156,7 +157,7 @@ func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *ht
 			return
 		}
 
-		respStruct, err := getMetricsStruct(req.Context(), appInstance.storage, m)
+		respStruct, err := getMetricsStruct(req.Context(), appInstance.Storage, m)
 		if err != nil {
 			internal.Logger.Infow("error in getMetricsStruct", "err", err)
 			http.Error(res, "internal server error", http.StatusInternalServerError)

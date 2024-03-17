@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"bytes"
@@ -6,9 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
+	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/midleware"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
+	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -19,23 +22,23 @@ import (
 )
 
 func Test_updateJsonHandler(t *testing.T) {
-	conf := config{
-		addr:            "",
-		storeInterval:   0,
-		fileStoragePath: "/tmp/fs_test",
-		restore:         false,
+	conf := server.Config{
+		Addr:            "",
+		StoreInterval:   0,
+		FileStoragePath: "/tmp/fs_test",
+		Restore:         false,
 	}
 	st := memory.NewMetricsRepository()
-	fs, err := NewFileStorage(conf)
+	fs, err := storage.NewFileStorage(conf)
 	assert.NoError(t, err)
 
-	appInstance := &app{
-		config:  &conf,
-		storage: st,
-		fs:      fs,
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: st,
+		Fs:      fs,
 	}
 
-	handler := updateJSONHandler(appInstance)
+	handler := UpdateJSONHandler(appInstance)
 
 	type want struct {
 		status int
@@ -124,17 +127,17 @@ func Test_updateJsonHandler(t *testing.T) {
 }
 
 func Test_getValueJsonHandler(t *testing.T) {
-	appInstance := &app{
-		config:  nil,
-		storage: memory.NewMetricsRepository(),
-		fs:      nil,
+	appInstance := &server.App{
+		Config:  nil,
+		Storage: memory.NewMetricsRepository(),
+		Fs:      nil,
 	}
 
-	err := appInstance.storage.AddGaugeValue(context.Background(), "ss", -3444)
+	err := appInstance.Storage.AddGaugeValue(context.Background(), "ss", -3444)
 	assert.NoError(t, err)
-	err = appInstance.storage.AddCounterValue(context.Background(), "ss", 3)
+	err = appInstance.Storage.AddCounterValue(context.Background(), "ss", 3)
 	assert.NoError(t, err)
-	handler := getValueJSONHandler(appInstance)
+	handler := GetValueJSONHandler(appInstance)
 
 	type want struct {
 		status int
@@ -214,21 +217,21 @@ func Test_getValueJsonHandler(t *testing.T) {
 }
 
 func TestGzipCompression(t *testing.T) {
-	appInstance := &app{
-		config:  nil,
-		storage: memory.NewMetricsRepository(),
-		fs:      nil,
+	appInstance := &server.App{
+		Config:  nil,
+		Storage: memory.NewMetricsRepository(),
+		Fs:      nil,
 	}
-	err := appInstance.storage.AddGaugeValue(context.Background(), "ss", -3444)
+	err := appInstance.Storage.AddGaugeValue(context.Background(), "ss", -3444)
 	assert.NoError(t, err)
-	err = appInstance.storage.AddCounterValue(context.Background(), "ss", 3)
+	err = appInstance.Storage.AddCounterValue(context.Background(), "ss", 3)
 	assert.NoError(t, err)
 	requestBody := `{"id":"ss","type":"counter","delta":3}
 `
 	htmlResponse := `<p>ss: -3444</p>`
 
 	t.Run("sends_gzip", func(t *testing.T) {
-		handler := gzipMiddleware(getValueJSONHandler(appInstance))
+		handler := midleware.GzipMiddleware(GetValueJSONHandler(appInstance))
 
 		buf := bytes.NewBuffer(nil)
 		zb := gzip.NewWriter(buf)
@@ -263,7 +266,7 @@ func TestGzipCompression(t *testing.T) {
 	})
 
 	t.Run("accept_gzip", func(t *testing.T) {
-		handler := gzipMiddleware(getValuesHandler(appInstance))
+		handler := midleware.GzipMiddleware(GetValuesHandler(appInstance))
 
 		buf := bytes.NewBufferString(requestBody)
 		r := httptest.NewRequest("POST", "/", buf)
@@ -293,24 +296,24 @@ func TestGzipCompression(t *testing.T) {
 }
 
 func Test_updateBatchJSONHandler(t *testing.T) {
-	conf := config{
-		addr:            "",
-		storeInterval:   3,
-		fileStoragePath: "/tmp/fs_test",
-		restore:         false,
+	conf := server.Config{
+		Addr:            "",
+		StoreInterval:   3,
+		FileStoragePath: "/tmp/fs_test",
+		Restore:         false,
 	}
 	st := memory.NewMetricsRepository()
-	fs, err := NewFileStorage(conf)
+	fs, err := storage.NewFileStorage(conf)
 	assert.NoError(t, err)
 
 	ctx := context.Background()
 	conn, tableName, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 
-	appInstance := &app{
-		config:  &conf,
-		storage: st,
-		fs:      fs,
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: st,
+		Fs:      fs,
 	}
 
 	if conn != nil {
@@ -396,11 +399,11 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			}
 
 			if !tt.inMemory {
-				appInstance.storage, err = postgres.NewMemStorage(ctx, conn, tableName)
+				appInstance.Storage, err = postgres.NewMemStorage(ctx, conn, tableName)
 				assert.NoError(t, err)
 			}
 
-			handler := updateBatchJSONHandler(appInstance)
+			handler := UpdateBatchJSONHandler(appInstance)
 
 			request := httptest.NewRequest(http.MethodPost, "/updates/", strings.NewReader(tt.body))
 			w := httptest.NewRecorder()

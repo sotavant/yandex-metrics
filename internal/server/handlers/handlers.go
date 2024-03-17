@@ -1,17 +1,18 @@
-package main
+package handlers
 
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 )
 
-func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
+func UpdateHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		mType := chi.URLParam(req, "type")
 		mName := chi.URLParam(req, "name")
@@ -25,7 +26,7 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 				return
 			}
 
-			err = appInstance.storage.AddGaugeValue(req.Context(), mName, val)
+			err = appInstance.Storage.AddGaugeValue(req.Context(), mName, val)
 			if err != nil {
 				http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
@@ -36,7 +37,7 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 				http.Error(res, "bad request", http.StatusBadRequest)
 			}
 
-			err = appInstance.storage.AddCounterValue(req.Context(), mName, val)
+			err = appInstance.Storage.AddCounterValue(req.Context(), mName, val)
 			if err != nil {
 				http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
@@ -46,8 +47,8 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 			return
 		}
 
-		if appInstance.fs != nil && appInstance.fs.storeInterval == 0 {
-			if err := appInstance.fs.Sync(req.Context(), appInstance.storage); err != nil {
+		if appInstance.Fs != nil && appInstance.Fs.StoreInterval == 0 {
+			if err := appInstance.Fs.Sync(req.Context(), appInstance.Storage); err != nil {
 				internal.Logger.Infow("error in sync")
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
@@ -58,7 +59,7 @@ func updateHandler(appInstance *app) func(res http.ResponseWriter, req *http.Req
 	}
 }
 
-func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Request) {
+func GetValueHandler(appInstance *server.App) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var strValue string
 		mType := chi.URLParam(req, "type")
@@ -69,7 +70,7 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 			return
 		}
 
-		value, err := appInstance.storage.GetValue(req.Context(), mType, mName)
+		value, err := appInstance.Storage.GetValue(req.Context(), mType, mName)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -88,7 +89,7 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 
 		_, err = w.Write([]byte(strValue))
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
@@ -96,11 +97,11 @@ func getValueHandler(appInstance *app) func(w http.ResponseWriter, req *http.Req
 	}
 }
 
-func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Request) {
+func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var resp = ""
 
-		gaugeValues, err := appInstance.storage.GetGauge(req.Context())
+		gaugeValues, err := appInstance.Storage.GetGauge(req.Context())
 		if err != nil {
 			internal.Logger.Infow("get gauge values error", "err", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -131,7 +132,7 @@ func getValuesHandler(appInstance *app) func(w http.ResponseWriter, req *http.Re
 	}
 }
 
-func pingDBHandler(dbConn *pgx.Conn) func(w http.ResponseWriter, req *http.Request) {
+func PingDBHandler(dbConn *pgx.Conn) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if dbConn == nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
