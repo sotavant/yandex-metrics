@@ -97,6 +97,34 @@ func (m *MetricsRepository) AddValue(ctx context.Context, metric internal.Metric
 	return err
 }
 
+func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Metrics) error {
+	var err error
+
+	tx, err := m.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	for _, metric := range metrics {
+		switch metric.MType {
+		case internal.GaugeType:
+			err = m.AddGaugeValue(ctx, metric.ID, *metric.Value)
+		case internal.CounterType:
+			err = m.AddCounterValue(ctx, metric.ID, *metric.Delta)
+		default:
+			return errors.New("undefined metric type")
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (interface{}, error) {
 	var delta int64
 	var value float64
@@ -131,6 +159,31 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 	}
 
 	return nil, nil
+}
+
+func (m *MetricsRepository) GetValues(ctx context.Context) ([]internal.Metrics, error) {
+	metrics := make([]internal.Metrics, 0)
+
+	query := m.setTableName(`select type, id, value, delta from #T#`)
+	rows, err := m.conn.Query(ctx, query)
+	switch {
+	case err != nil:
+		return nil, err
+	case errors.Is(err, pgx.ErrNoRows):
+		return nil, nil
+	}
+
+	for rows.Next() {
+		var metric internal.Metrics
+		err = rows.Scan(&metric.MType, &metric.ID, &metric.Value, &metric.Delta)
+		if err != nil {
+			return nil, err
+		}
+
+		metrics = append(metrics, metric)
+	}
+
+	return metrics, nil
 }
 
 func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bool, error) {

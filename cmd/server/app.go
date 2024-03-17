@@ -92,6 +92,7 @@ func (app *app) initRouters() *chi.Mux {
 	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(app))))
 	r.Get("/value/{type}/{name}", withLogging(gzipMiddleware(getValueHandler(app))))
 	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(app))))
+	r.Post("/updates/", withLogging(gzipMiddleware(updateBatchJSONHandler(app))))
 	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(app))))
 	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(app))))
 	r.Get("/ping", withLogging(gzipMiddleware(pingDBHandler(app.dbConn))))

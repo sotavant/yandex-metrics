@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
+	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
+	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -286,4 +290,139 @@ func TestGzipCompression(t *testing.T) {
 
 		require.Equal(t, htmlResponse, string(b))
 	})
+}
+
+func Test_updateBatchJSONHandler(t *testing.T) {
+	conf := config{
+		addr:            "",
+		storeInterval:   3,
+		fileStoragePath: "/tmp/fs_test",
+		restore:         false,
+	}
+	st := memory.NewMetricsRepository()
+	fs, err := NewFileStorage(conf)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	conn, tableName, err := test.InitConnection(ctx, t)
+	assert.NoError(t, err)
+
+	appInstance := &app{
+		config:  &conf,
+		storage: st,
+		fs:      fs,
+	}
+
+	if conn != nil {
+		defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+			err = test.DropTable(ctx, conn, tableName)
+			assert.NoError(t, err)
+
+			err = conn.Close(ctx)
+			assert.NoError(t, err)
+		}(ctx, *conn, tableName)
+	}
+
+	type want struct {
+		status int
+		body   string
+	}
+
+	tests := []struct {
+		name     string
+		body     string
+		want     want
+		inMemory bool
+	}{
+		{
+			name: `newGaugeValue`,
+			body: `[{"id": "ss","type":"gauge","value":-33.345345}]`,
+			want: struct {
+				status int
+				body   string
+			}{status: 200, body: `[{"id":"ss","type":"gauge","value":-33.345345}]`},
+			inMemory: true,
+		},
+		{
+			name: `newCounterValue`,
+			body: `[{"id": "ss","type":"counter","delta":3}]`,
+			want: struct {
+				status int
+				body   string
+			}{status: 200, body: `[{"id":"ss","type":"counter","delta":3}, {"id":"ss","type":"gauge","value":-33.345345}]`},
+			inMemory: true,
+		},
+		{
+			name: `repeatCounterValue`,
+			body: `[{"id": "ss","type":"counter","delta":3}]`,
+			want: struct {
+				status int
+				body   string
+			}{status: 200, body: `[{"id":"ss","type":"counter","delta":6}, {"id":"ss","type":"gauge","value":-33.345345}]`},
+			inMemory: true,
+		},
+		{
+			name: `newGaugeValueBD`,
+			body: `[{"id": "ss","type":"gauge","value":-33.345345}]`,
+			want: struct {
+				status int
+				body   string
+			}{status: 200, body: `[{"id":"ss","type":"gauge","value":-33.345345}]`},
+			inMemory: false,
+		},
+		{
+			name: `newGaugeValuesBD`,
+			body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345}]`,
+			want: struct {
+				status int
+				body   string
+			}{status: 200, body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345}]`},
+			inMemory: false,
+		},
+		{
+			name: `addVariousValuesBD`,
+			body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345}, {"id": "ss","type":"counter","delta":3}]`,
+			want: struct {
+				status int
+				body   string
+			}{status: 200, body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345},{"id": "ss","type":"counter","delta":3}]`},
+			inMemory: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.inMemory && conn == nil {
+				return
+			}
+
+			if !tt.inMemory {
+				appInstance.storage, err = postgres.NewMemStorage(ctx, conn, tableName)
+				assert.NoError(t, err)
+			}
+
+			handler := updateBatchJSONHandler(appInstance)
+
+			request := httptest.NewRequest(http.MethodPost, "/updates/", strings.NewReader(tt.body))
+			w := httptest.NewRecorder()
+
+			handler(w, request)
+			result := w.Result()
+			defer func() {
+				err := result.Body.Close()
+				assert.NoError(t, err)
+			}()
+
+			body, err := io.ReadAll(result.Body)
+
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.want.status, result.StatusCode)
+			if result.StatusCode == http.StatusOK {
+				var expected, actual []interface{}
+				assert.NoError(t, json.Unmarshal([]byte(tt.want.body), &expected))
+				assert.NoError(t, json.Unmarshal(body, &actual))
+				assert.ElementsMatch(t, expected, actual)
+			}
+		})
+	}
 }

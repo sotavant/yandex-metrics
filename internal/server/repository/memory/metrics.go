@@ -38,6 +38,17 @@ func (m *MetricsRepository) AddValue(ctx context.Context, metric internal.Metric
 	return err
 }
 
+func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Metrics) error {
+	for _, v := range metrics {
+		err := m.AddValue(ctx, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (interface{}, error) {
 	switch mType {
 	case internal.GaugeType:
@@ -53,6 +64,30 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 	}
 
 	return nil, nil
+}
+
+func (m *MetricsRepository) GetValues(ctx context.Context) ([]internal.Metrics, error) {
+	metrics := make([]internal.Metrics, 0, len(m.Gauge)+len(m.Counter))
+
+	for k, v := range m.Gauge {
+		metrics = append(metrics, internal.Metrics{
+			ID:    k,
+			MType: internal.GaugeType,
+			Delta: nil,
+			Value: &v,
+		})
+	}
+
+	for k, v := range m.Counter {
+		metrics = append(metrics, internal.Metrics{
+			ID:    k,
+			MType: internal.CounterType,
+			Delta: &v,
+			Value: nil,
+		})
+	}
+
+	return metrics, nil
 }
 
 func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bool, error) {

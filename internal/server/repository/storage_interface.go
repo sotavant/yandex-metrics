@@ -15,4 +15,6 @@ type Storage interface {
 	GetGaugeValue(ctx context.Context, key string) (float64, error)
 	KeyExist(ctx context.Context, mType string, key string) (bool, error)
 	AddValue(ctx context.Context, m internal.Metrics) error
+	AddValues(ctx context.Context, m []internal.Metrics) error
+	GetValues(ctx context.Context) ([]internal.Metrics, error)
 }

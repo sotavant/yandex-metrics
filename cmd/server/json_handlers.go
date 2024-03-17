@@ -79,6 +79,54 @@ func updateJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http
 	}
 }
 
+func updateBatchJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
+	return func(res http.ResponseWriter, req *http.Request) {
+		var m []internal.Metrics
+
+		if err := json.NewDecoder(req.Body).Decode(&m); err != nil {
+			http.Error(res, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if len(m) == 0 {
+			http.Error(res, "data absent", http.StatusBadRequest)
+			return
+		}
+
+		err := appInstance.storage.AddValues(req.Context(), m)
+		if err != nil {
+			internal.Logger.Infow("error in addValues", "err", err)
+			http.Error(res, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		metrics, err := appInstance.storage.GetValues(req.Context())
+		if err != nil {
+			internal.Logger.Infow("error in get metrics", "err", err)
+			http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		res.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(res)
+		if err := enc.Encode(metrics); err != nil {
+			internal.Logger.Infow("error in encode")
+			http.Error(res, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		if appInstance.fs != nil && appInstance.fs.storeInterval == 0 {
+			if err = appInstance.fs.Sync(req.Context(), appInstance.storage); err != nil {
+				internal.Logger.Infow("error in sync")
+				http.Error(res, "internal server error", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		res.WriteHeader(http.StatusOK)
+	}
+}
+
 func getValueJSONHandler(appInstance *app) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
