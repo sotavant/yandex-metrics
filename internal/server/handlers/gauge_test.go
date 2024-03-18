@@ -1,10 +1,11 @@
-package server
+package handlers
 
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server/handlers"
+	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func Test_handleGauge(t *testing.T) {
 		value       float64
 	}
 
-	conf := Config{
+	conf := config.Config{
 		Addr:            "",
 		StoreInterval:   0,
 		FileStoragePath: "/tmp/fs_test",
@@ -70,10 +71,10 @@ func Test_handleGauge(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fs, err := storage.NewFileStorage(conf)
+			fs, err := storage.NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 			assert.NoError(t, err)
 
-			appInstance := &App{
+			appInstance := &server.App{
 				Config:  &conf,
 				Storage: tt.storage,
 				Fs:      fs,
@@ -89,7 +90,7 @@ func Test_handleGauge(t *testing.T) {
 
 			request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
 
-			h := http.HandlerFunc(handlers.UpdateHandler(appInstance))
+			h := http.HandlerFunc(UpdateHandler(appInstance))
 			h(w, request)
 			result := w.Result()
 			defer func() {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	storage2 "github.com/sotavant/yandex-metrics/internal/server/storage"
@@ -16,13 +17,13 @@ func Test_badTypeHandler(t *testing.T) {
 		responseStatus int
 	}
 
-	conf := &server.Config{
+	conf := &config.Config{
 		Addr:            "",
 		StoreInterval:   0,
 		FileStoragePath: "/tmp/fs_test",
 		Restore:         false,
 	}
-	fs, _ := storage2.NewFileStorage(*conf)
+	fs, _ := storage2.NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 
 	storage := memory.NewMetricsRepository()
 

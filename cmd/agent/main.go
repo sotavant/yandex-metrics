@@ -2,24 +2,19 @@ package main
 
 import (
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/agent/client"
+	"github.com/sotavant/yandex-metrics/internal/agent/config"
+	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 	"time"
 )
 
-const (
-	pollInterval   = 2
-	reportInterval = 10
-	serverAddress  = `localhost:8080`
-)
-
-var Config = new(config)
-
 func main() {
-	Config.parseFlags()
+	config.InitConfig()
 
-	var poolIntervalDuration = time.Duration(Config.pollInterval) * time.Second
-	var reportIntervalDuration = time.Duration(Config.reportInterval) * time.Second
+	var poolIntervalDuration = time.Duration(config.AppConfig.PollInterval) * time.Second
+	var reportIntervalDuration = time.Duration(config.AppConfig.ReportInterval) * time.Second
 	internal.InitLogger()
-	ms := NewStorage()
+	ms := storage.NewStorage()
 	forever1 := make(chan bool)
 	forever2 := make(chan bool)
 
@@ -30,7 +25,7 @@ func main() {
 				return
 			default:
 				<-time.After(poolIntervalDuration)
-				ms.updateValues()
+				ms.UpdateValues()
 			}
 		}
 	}()
@@ -42,7 +37,7 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				reportMetric(ms)
+				client.ReportMetric(ms)
 			}
 		}
 	}()

@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
@@ -298,7 +299,7 @@ func Test_getValuesHandler(t *testing.T) {
 func Test_pingDBHandler(t *testing.T) {
 	ctx := context.Background()
 	internal.InitLogger()
-	conf := server.InitConfig()
+	conf := config.InitConfig()
 
 	if conf.DatabaseDSN == "" {
 		return
@@ -306,12 +307,12 @@ func Test_pingDBHandler(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		conf       *server.Config
+		conf       *config.Config
 		wantStatus int
 	}{
 		{
 			name:       "emptyDsn",
-			conf:       &server.Config{DatabaseDSN: ""},
+			conf:       &config.Config{DatabaseDSN: ""},
 			wantStatus: http.StatusInternalServerError,
 		},
 		{

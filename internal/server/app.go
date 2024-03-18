@@ -2,11 +2,9 @@ package server
 
 import (
 	"context"
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server/handlers"
-	"github.com/sotavant/yandex-metrics/internal/server/midleware"
+	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
@@ -14,22 +12,22 @@ import (
 )
 
 type App struct {
-	Config  *Config
+	Config  *config.Config
 	Storage repository.Storage
 	Fs      *storage.FileStorage
-	dbConn  *pgx.Conn
+	DbConn  *pgx.Conn
 }
 
 func InitApp(ctx context.Context) (*App, error) {
 	var err error
 
-	conf := InitConfig()
+	conf := config.InitConfig()
 	dbConn := InitDB(ctx, *conf)
 	appInstance := new(App)
 
 	if dbConn == nil {
 		appInstance.Storage = memory.NewMetricsRepository()
-		appInstance.Fs, err = storage.NewFileStorage(*conf)
+		appInstance.Fs, err = storage.NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 
 		if err != nil {
 			panic(err)
@@ -47,7 +45,7 @@ func InitApp(ctx context.Context) (*App, error) {
 	}
 
 	appInstance.Config = conf
-	appInstance.dbConn = dbConn
+	appInstance.DbConn = dbConn
 
 	return appInstance, nil
 }
@@ -75,7 +73,7 @@ func (app *App) SyncFs(ctx context.Context) {
 	}
 }
 
-func InitDB(ctx context.Context, conf Config) *pgx.Conn {
+func InitDB(ctx context.Context, conf config.Config) *pgx.Conn {
 	if conf.DatabaseDSN == "" {
 		return nil
 	}
@@ -86,18 +84,4 @@ func InitDB(ctx context.Context, conf Config) *pgx.Conn {
 	}
 
 	return dbConn
-}
-
-func (app *App) InitRouters() *chi.Mux {
-	r := chi.NewRouter()
-
-	r.Post("/update/{type}/{name}/{value}", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateHandler(app))))
-	r.Get("/value/{type}/{name}", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValueHandler(app))))
-	r.Post("/update/", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateJSONHandler(app))))
-	r.Post("/updates/", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateBatchJSONHandler(app))))
-	r.Post("/value/", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValueJSONHandler(app))))
-	r.Get("/", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValuesHandler(app))))
-	r.Get("/ping", midleware.WithLogging(midleware.GzipMiddleware(handlers.PingDBHandler(app.dbConn))))
-
-	return r
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"io"
 	"os"
@@ -21,8 +20,8 @@ type FileStorage struct {
 	StoreInterval uint
 }
 
-func NewFileStorage(conf server.Config) (*FileStorage, error) {
-	file, err := os.OpenFile(conf.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func NewFileStorage(fileStorage string, needRestore bool, storeInterval uint) (*FileStorage, error) {
+	file, err := os.OpenFile(fileStorage, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -31,8 +30,8 @@ func NewFileStorage(conf server.Config) (*FileStorage, error) {
 		File:          file,
 		encoder:       json.NewEncoder(file),
 		decoder:       json.NewDecoder(file),
-		needRestore:   conf.Restore,
-		StoreInterval: conf.StoreInterval,
+		needRestore:   needRestore,
+		StoreInterval: storeInterval,
 	}, nil
 }
 
@@ -120,7 +119,7 @@ func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 	return nil
 }
 
-func (fs *FileStorage) SyncByInterval(ctx context.Context, app *server.App, ch chan bool) error {
+func (fs *FileStorage) SyncByInterval(ctx context.Context, storage repository.Storage, ch chan bool) error {
 	if fs.StoreInterval == 0 {
 		close(ch)
 		return nil
@@ -135,7 +134,7 @@ func (fs *FileStorage) SyncByInterval(ctx context.Context, app *server.App, ch c
 				return nil
 			default:
 				<-time.After(storeIntervalDuration)
-				if err := fs.Sync(ctx, app.Storage); err != nil {
+				if err := fs.Sync(ctx, storage); err != nil {
 					return err
 				}
 			}

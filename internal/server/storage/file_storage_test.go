@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestFileStorage_Restore(t *testing.T) {
-	conf := server.Config{
+	conf := config.Config{
 		Addr:            "",
 		StoreInterval:   0,
 		FileStoragePath: "/tmp/fs_test",
@@ -84,7 +84,7 @@ func TestFileStorage_Restore(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fs, _ := NewFileStorage(conf)
+			fs, _ := NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 			fs.needRestore = tt.needRestore
 			ms := memory.NewMetricsRepository()
 			ctx := context.Background()
@@ -121,7 +121,7 @@ func getFloat64Pointer(num float64) *float64 {
 }
 
 func TestFileStorage_Sync(t *testing.T) {
-	conf := server.Config{
+	conf := config.Config{
 		Addr:            "",
 		StoreInterval:   0,
 		FileStoragePath: "/tmp/fs_test",
@@ -150,7 +150,7 @@ func TestFileStorage_Sync(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fs, _ := NewFileStorage(conf)
+			fs, _ := NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 			ms := tt.storage
 
 			defer func(file *os.File) {

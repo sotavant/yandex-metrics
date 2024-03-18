@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
 	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/midleware"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
@@ -22,14 +23,14 @@ import (
 )
 
 func Test_updateJsonHandler(t *testing.T) {
-	conf := server.Config{
+	conf := config.Config{
 		Addr:            "",
 		StoreInterval:   0,
 		FileStoragePath: "/tmp/fs_test",
 		Restore:         false,
 	}
 	st := memory.NewMetricsRepository()
-	fs, err := storage.NewFileStorage(conf)
+	fs, err := storage.NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 	assert.NoError(t, err)
 
 	appInstance := &server.App{
@@ -296,14 +297,14 @@ func TestGzipCompression(t *testing.T) {
 }
 
 func Test_updateBatchJSONHandler(t *testing.T) {
-	conf := server.Config{
+	conf := config.Config{
 		Addr:            "",
 		StoreInterval:   3,
 		FileStoragePath: "/tmp/fs_test",
 		Restore:         false,
 	}
 	st := memory.NewMetricsRepository()
-	fs, err := storage.NewFileStorage(conf)
+	fs, err := storage.NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 	assert.NoError(t, err)
 
 	ctx := context.Background()

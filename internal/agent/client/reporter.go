@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bytes"
@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"github.com/go-resty/resty/v2"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/agent/config"
+	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 )
 
 const (
@@ -16,13 +18,13 @@ const (
 	poolCounterName = `PollCount`
 )
 
-func reportMetric(ms *MetricsStorage) {
+func ReportMetric(ms *storage.MetricsStorage) {
 	//sendGauge(ms)
 	//sendCounter(ms)
 	sendBatchMetrics(ms)
 }
 
-func sendGauge(ms *MetricsStorage) {
+func sendGauge(ms *storage.MetricsStorage) {
 	for k, v := range ms.Metrics {
 		m := internal.Metrics{
 			ID:    k,
@@ -33,7 +35,7 @@ func sendGauge(ms *MetricsStorage) {
 	}
 }
 
-func sendBatchMetrics(ms *MetricsStorage) {
+func sendBatchMetrics(ms *storage.MetricsStorage) {
 	if len(ms.Metrics) == 0 {
 		return
 	}
@@ -63,7 +65,7 @@ func sendBatchMetrics(ms *MetricsStorage) {
 	sendBatchRequest(m)
 }
 
-func sendCounter(ms *MetricsStorage) {
+func sendCounter(ms *storage.MetricsStorage) {
 	m := internal.Metrics{
 		ID:    poolCounterName,
 		MType: counterType,
@@ -83,7 +85,7 @@ func sendRequest(metrics internal.Metrics) {
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(getCompressedData(jsonData)).
-		Post("http://" + Config.addr + URL)
+		Post("http://" + config.AppConfig.Addr + URL)
 
 	if err != nil {
 		internal.Logger.Infoln("error in request", err)
@@ -101,7 +103,7 @@ func sendBatchRequest(metrics []internal.Metrics) {
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(getCompressedData(jsonData)).
-		Post("http://" + Config.addr + batchURL)
+		Post("http://" + config.AppConfig.Addr + batchURL)
 
 	if err != nil {
 		internal.Logger.Infoln("error in request", err)
