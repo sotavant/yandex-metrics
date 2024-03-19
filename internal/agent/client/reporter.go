@@ -103,7 +103,6 @@ func sendRequest(jsonData []byte, url string) {
 	counter := 1
 
 	for counter <= retries {
-		internal.Logger.Infoln("attempt number - ", counter)
 		client := resty.New()
 		_, err := client.R().
 			SetHeader("Content-Type", "application/json").

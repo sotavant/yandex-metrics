@@ -12,7 +12,7 @@ import (
 
 func TestMetricsRepository_AddGaugeValue(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return
@@ -64,7 +64,7 @@ func TestMetricsRepository_AddGaugeValue(t *testing.T) {
 
 func TestMetricsRepository_AddCounterValue(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return
@@ -132,7 +132,7 @@ func TestMetricsRepository_AddCounterValue(t *testing.T) {
 
 func TestMetricsRepository_AddValue(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return
@@ -187,7 +187,7 @@ func TestMetricsRepository_AddValue(t *testing.T) {
 
 func TestMetricsRepository_KeyExist(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return
@@ -261,7 +261,7 @@ func TestMetricsRepository_KeyExist(t *testing.T) {
 
 func TestMetricsRepository_GetGauge(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return
@@ -313,7 +313,7 @@ func TestMetricsRepository_GetGauge(t *testing.T) {
 
 func TestMetricsRepository_GetGaugeValue(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return
@@ -367,7 +367,7 @@ func TestMetricsRepository_GetGaugeValue(t *testing.T) {
 
 func TestMetricsRepository_GetCounters(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return
@@ -431,7 +431,7 @@ func TestMetricsRepository_GetCounters(t *testing.T) {
 
 func TestMetricsRepository_GetCounterValue(t *testing.T) {
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, _, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 	if conn == nil {
 		return

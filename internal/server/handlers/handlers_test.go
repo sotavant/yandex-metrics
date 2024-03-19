@@ -26,7 +26,7 @@ func Test_getValueHandler(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, DNS, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 
 	if conn != nil {
@@ -160,7 +160,7 @@ func Test_getValueHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			if conn != nil && !tt.memory {
-				storage, err = postgres.NewMemStorage(ctx, conn, tableName)
+				storage, err = postgres.NewMemStorage(ctx, conn, tableName, DNS)
 				assert.NoError(t, err)
 			} else if !tt.memory && conn == nil {
 				return
@@ -323,7 +323,7 @@ func Test_pingDBHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dbConn := server.InitDB(ctx, *tt.conf)
+			dbConn, _ := postgres.InitDB(ctx, tt.conf.DatabaseDSN)
 			h := http.HandlerFunc(PingDBHandler(dbConn))
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
 			w := httptest.NewRecorder()

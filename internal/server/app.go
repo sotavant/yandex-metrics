@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"github.com/jackc/pgx/v5"
-	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
@@ -22,7 +21,10 @@ func InitApp(ctx context.Context) (*App, error) {
 	var err error
 
 	conf := config.InitConfig()
-	dbConn := InitDB(ctx, *conf)
+	dbConn, err := postgres.InitDB(ctx, conf.DatabaseDSN)
+	if err != nil {
+		panic(err)
+	}
 	appInstance := new(App)
 
 	if dbConn == nil {
@@ -37,7 +39,7 @@ func InitApp(ctx context.Context) (*App, error) {
 			panic(err)
 		}
 	} else {
-		appInstance.Storage, err = postgres.NewMemStorage(ctx, dbConn, conf.TableName)
+		appInstance.Storage, err = postgres.NewMemStorage(ctx, dbConn, conf.TableName, conf.DatabaseDSN)
 
 		if err != nil {
 			panic(err)
@@ -71,17 +73,4 @@ func (app *App) SyncFs(ctx context.Context) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func InitDB(ctx context.Context, conf config.Config) *pgx.Conn {
-	if conf.DatabaseDSN == "" {
-		return nil
-	}
-
-	dbConn, err := pgx.Connect(ctx, conf.DatabaseDSN)
-	if err != nil {
-		internal.Logger.Panicw("Unable to connect to database", "err", err)
-	}
-
-	return dbConn
 }

@@ -308,7 +308,7 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	conn, tableName, err := test.InitConnection(ctx, t)
+	conn, tableName, DNS, err := test.InitConnection(ctx, t)
 	assert.NoError(t, err)
 
 	appInstance := &server.App{
@@ -400,7 +400,7 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			}
 
 			if !tt.inMemory {
-				appInstance.Storage, err = postgres.NewMemStorage(ctx, conn, tableName)
+				appInstance.Storage, err = postgres.NewMemStorage(ctx, conn, tableName, DNS)
 				assert.NoError(t, err)
 			}
 

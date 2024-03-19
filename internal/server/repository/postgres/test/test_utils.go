@@ -10,30 +10,30 @@ import (
 	"testing"
 )
 
-func InitConnection(ctx context.Context, t *testing.T) (*pgx.Conn, string, error) {
+func InitConnection(ctx context.Context, t *testing.T) (*pgx.Conn, string, string, error) {
 	internal.InitLogger()
 	dns := os.Getenv("DATABASE_DSN")
 	tableName := os.Getenv("TABLE_NAME")
 
 	if dns == "" || tableName == "" {
-		return nil, "", nil
+		return nil, "", "", nil
 	}
 
 	dbConn, err := pgx.Connect(ctx, dns)
 
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	err = dbConn.Ping(ctx)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	err = createTable(ctx, *dbConn, tableName)
 	assert.NoError(t, err)
 
-	return dbConn, tableName, nil
+	return dbConn, tableName, dns, nil
 }
 
 func DropTable(ctx context.Context, conn pgx.Conn, tableName string) error {
