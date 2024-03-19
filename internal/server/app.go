@@ -14,7 +14,7 @@ type App struct {
 	Config  *config.Config
 	Storage repository.Storage
 	Fs      *storage.FileStorage
-	DbConn  *pgx.Conn
+	DBConn  *pgx.Conn
 }
 
 func InitApp(ctx context.Context) (*App, error) {
@@ -47,7 +47,7 @@ func InitApp(ctx context.Context) (*App, error) {
 	}
 
 	appInstance.Config = conf
-	appInstance.DbConn = dbConn
+	appInstance.DBConn = dbConn
 
 	return appInstance, nil
 }
