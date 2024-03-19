@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"github.com/go-resty/resty/v2"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
+	"github.com/sotavant/yandex-metrics/internal/utils"
+	"syscall"
+	"time"
 )
 
 const (
@@ -31,7 +35,14 @@ func sendGauge(ms *storage.MetricsStorage) {
 			MType: gaugeType,
 			Value: &v,
 		}
-		sendRequest(m)
+
+		jsonData, err := json.Marshal(m)
+		if err != nil {
+			internal.Logger.Infoln("marshall error", err)
+			return
+		}
+
+		sendRequest(jsonData, URL)
 	}
 }
 
@@ -62,7 +73,13 @@ func sendBatchMetrics(ms *storage.MetricsStorage) {
 		Delta: &ms.PollCount,
 	})
 
-	sendBatchRequest(m)
+	jsonData, err := json.Marshal(m)
+	if err != nil {
+		internal.Logger.Infoln("marshall error", err)
+		return
+	}
+
+	sendRequest(jsonData, batchURL)
 }
 
 func sendCounter(ms *storage.MetricsStorage) {
@@ -71,42 +88,40 @@ func sendCounter(ms *storage.MetricsStorage) {
 		MType: counterType,
 		Delta: &ms.PollCount,
 	}
-	sendRequest(m)
-}
 
-func sendRequest(metrics internal.Metrics) {
-	jsonData, err := json.Marshal(metrics)
+	jsonData, err := json.Marshal(m)
 	if err != nil {
 		internal.Logger.Infoln("marshall error", err)
+		return
 	}
-
-	client := resty.New()
-	_, err = client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
-		SetBody(getCompressedData(jsonData)).
-		Post("http://" + config.AppConfig.Addr + URL)
-
-	if err != nil {
-		internal.Logger.Infoln("error in request", err)
-	}
+	sendRequest(jsonData, URL)
 }
 
-func sendBatchRequest(metrics []internal.Metrics) {
-	jsonData, err := json.Marshal(metrics)
-	if err != nil {
-		internal.Logger.Infoln("marshall error", err)
-	}
+func sendRequest(jsonData []byte, url string) {
+	intervals := utils.GetRetryWaitTimes()
+	retries := len(intervals) + 1
+	counter := 1
 
-	client := resty.New()
-	_, err = client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
-		SetBody(getCompressedData(jsonData)).
-		Post("http://" + config.AppConfig.Addr + batchURL)
+	for counter <= retries {
+		internal.Logger.Infoln("attempt number - ", counter)
+		client := resty.New()
+		_, err := client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(getCompressedData(jsonData)).
+			Post("http://" + config.AppConfig.Addr + url)
 
-	if err != nil {
-		internal.Logger.Infoln("error in request", err)
+		if err != nil {
+			internal.Logger.Infoln("error in request", err)
+			if errors.Is(err, syscall.ECONNREFUSED) {
+				time.Sleep(time.Duration(intervals[counter]) * time.Second)
+				counter++
+			} else {
+				break
+			}
+		} else {
+			break
+		}
 	}
 }
 
