@@ -345,7 +345,6 @@ func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bo
 	query := m.setTableName(`select count(*) from #T# where type = $1 and id = $2 limit 1`)
 
 	for counter <= retries {
-		internal.Logger.Infow("hear", "err", err)
 		if m.connectionIsBroken() {
 			m.conn, err = InitDB(ctx, m.DSN)
 			if err != nil {
@@ -389,7 +388,6 @@ func (m *MetricsRepository) GetGauge(ctx context.Context) (map[string]float64, e
 	query := m.setTableName(`select id, value from #T# where type = $1`)
 
 	for counter <= retries {
-		internal.Logger.Infow("hear", "err", err)
 		if m.connectionIsBroken() {
 			m.conn, err = InitDB(ctx, m.DSN)
 			if err != nil {
