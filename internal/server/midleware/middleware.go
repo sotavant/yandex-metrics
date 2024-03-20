@@ -1,4 +1,4 @@
-package main
+package midleware
 
 import (
 	"github.com/sotavant/yandex-metrics/internal"
@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const AcceptableEncoding = "gzip"
+
 func getTypesForEncoding() [3]string {
 	return [3]string{
 		"html/text",
@@ -16,7 +18,7 @@ func getTypesForEncoding() [3]string {
 	}
 }
 
-func withLogging(h http.HandlerFunc) http.HandlerFunc {
+func WithLogging(h http.HandlerFunc) http.HandlerFunc {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		uri := r.RequestURI
@@ -51,12 +53,12 @@ func withLogging(h http.HandlerFunc) http.HandlerFunc {
 	return logFn
 }
 
-func gzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
+func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 		if isNeedEncoding(r) {
 			contentEncoding := r.Header.Get("Content-Encoding")
-			sendsGzip := strings.Contains(contentEncoding, acceptableEncoding)
+			sendsGzip := strings.Contains(contentEncoding, AcceptableEncoding)
 			if sendsGzip {
 				cr, err := server.NewCompressReader(r.Body)
 				if err != nil {

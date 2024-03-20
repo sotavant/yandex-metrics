@@ -1,48 +1,27 @@
 package main
 
 import (
+	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/handlers"
+	"github.com/sotavant/yandex-metrics/internal/server/midleware"
 	"net/http"
 	"sync"
 )
 
-const (
-	gaugeType          = "gauge"
-	counterType        = "counter"
-	serverAddress      = "localhost:8080"
-	acceptableEncoding = "gzip"
-)
-
 func main() {
-	config := new(config)
-	config.parseFlags()
+	ctx := context.Background()
+	internal.InitLogger()
 
-	mem := NewMemStorage()
-	fs, err := NewFileStorage(*config)
-	defer func(fs *FileStorage) {
-		err := fs.Sync(mem)
-		if err != nil {
-			panic(err)
-		}
-
-		err = fs.file.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(fs)
-
+	appInstance, err := server.InitApp(ctx)
 	if err != nil {
 		panic(err)
 	}
+	defer appInstance.SyncFs(ctx)
 
-	if err = fs.Restore(mem); err != nil {
-		panic(err)
-	}
-
-	internal.InitLogger()
-
-	r := initRouter(mem, fs)
+	r := initRouters(appInstance)
 
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)
@@ -50,7 +29,7 @@ func main() {
 	wg.Add(2)
 
 	go func() {
-		err = http.ListenAndServe(config.addr, r)
+		err = http.ListenAndServe(appInstance.Config.Addr, r)
 		if err != nil {
 			close(httpChan)
 			panic(err)
@@ -58,7 +37,11 @@ func main() {
 	}()
 
 	go func() {
-		if err = fs.SyncByInterval(mem, syncChan); err != nil {
+		if appInstance.Fs == nil {
+			close(syncChan)
+			return
+		}
+		if err = appInstance.Fs.SyncByInterval(ctx, appInstance.Storage, syncChan); err != nil {
 			panic(err)
 		}
 	}()
@@ -66,14 +49,16 @@ func main() {
 	wg.Wait()
 }
 
-func initRouter(mem Storage, fs *FileStorage) *chi.Mux {
+func initRouters(app *server.App) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Post("/update/{type}/{name}/{value}", withLogging(gzipMiddleware(updateHandler(mem, fs))))
-	r.Get("/value/{type}/{name}", withLogging(gzipMiddleware(getValueHandler(mem))))
-	r.Post("/update/", withLogging(gzipMiddleware(updateJSONHandler(mem, fs))))
-	r.Post("/value/", withLogging(gzipMiddleware(getValueJSONHandler(mem))))
-	r.Get("/", withLogging(gzipMiddleware(getValuesHandler(mem))))
+	r.Post("/update/{type}/{name}/{value}", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateHandler(app))))
+	r.Get("/value/{type}/{name}", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValueHandler(app))))
+	r.Post("/update/", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateJSONHandler(app))))
+	r.Post("/updates/", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateBatchJSONHandler(app))))
+	r.Post("/value/", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValueJSONHandler(app))))
+	r.Get("/", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValuesHandler(app))))
+	r.Get("/ping", midleware.WithLogging(midleware.GzipMiddleware(handlers.PingDBHandler(app.DBConn))))
 
 	return r
 }

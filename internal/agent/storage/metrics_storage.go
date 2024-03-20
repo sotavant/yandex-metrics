@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"math/rand"
@@ -48,7 +48,7 @@ func NewStorage() *MetricsStorage {
 	return &m
 }
 
-func (m *MetricsStorage) updateValues() {
+func (m *MetricsStorage) UpdateValues() {
 	var rtm runtime.MemStats
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 

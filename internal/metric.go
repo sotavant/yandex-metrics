@@ -1,5 +1,8 @@
 package internal
 
+const GaugeType = "gauge"
+const CounterType = "counter"
+
 type Metrics struct {
 	ID    string   `json:"id"`
 	MType string   `json:"type"`

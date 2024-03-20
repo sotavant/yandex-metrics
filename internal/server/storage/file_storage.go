@@ -1,8 +1,10 @@
-package main
+package storage
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"io"
 	"os"
 	"sync"
@@ -10,30 +12,30 @@ import (
 )
 
 type FileStorage struct {
-	file          *os.File
+	File          *os.File
 	encoder       *json.Encoder
 	decoder       *json.Decoder
 	needRestore   bool
 	fileMutex     sync.Mutex
-	storeInterval uint
+	StoreInterval uint
 }
 
-func NewFileStorage(conf config) (*FileStorage, error) {
-	file, err := os.OpenFile(conf.fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func NewFileStorage(fileStorage string, needRestore bool, storeInterval uint) (*FileStorage, error) {
+	file, err := os.OpenFile(fileStorage, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
 	}
 
 	return &FileStorage{
-		file:          file,
+		File:          file,
 		encoder:       json.NewEncoder(file),
 		decoder:       json.NewDecoder(file),
-		needRestore:   conf.restore,
-		storeInterval: conf.storeInterval,
+		needRestore:   needRestore,
+		StoreInterval: storeInterval,
 	}, nil
 }
 
-func (fs *FileStorage) Restore(st Storage) error {
+func (fs *FileStorage) Restore(ctx context.Context, st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
 
@@ -41,7 +43,7 @@ func (fs *FileStorage) Restore(st Storage) error {
 		return nil
 	}
 
-	if _, err := fs.file.Seek(0, io.SeekStart); err != nil {
+	if _, err := fs.File.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 
@@ -58,7 +60,7 @@ func (fs *FileStorage) Restore(st Storage) error {
 			return err
 		}
 
-		if err = st.AddValue(m); err != nil {
+		if err = st.AddValue(ctx, m); err != nil {
 			return err
 		}
 	}
@@ -66,18 +68,23 @@ func (fs *FileStorage) Restore(st Storage) error {
 	return nil
 }
 
-func (fs *FileStorage) Sync(st Storage) error {
+func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
 
-	if err := fs.file.Truncate(0); err != nil {
+	if err := fs.File.Truncate(0); err != nil {
 		return err
 	}
 
-	for k, v := range st.GetGauge() {
+	gaugeValues, err := st.GetGauge(ctx)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range gaugeValues {
 		m := internal.Metrics{
 			ID:    k,
-			MType: gaugeType,
+			MType: internal.GaugeType,
 			Delta: nil,
 			Value: &v,
 		}
@@ -87,10 +94,15 @@ func (fs *FileStorage) Sync(st Storage) error {
 		}
 	}
 
-	for k, v := range st.GetCounters() {
+	counters, err := st.GetCounters(ctx)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range counters {
 		m := internal.Metrics{
 			ID:    k,
-			MType: counterType,
+			MType: internal.CounterType,
 			Delta: &v,
 			Value: nil,
 		}
@@ -100,20 +112,20 @@ func (fs *FileStorage) Sync(st Storage) error {
 		}
 	}
 
-	if err := fs.file.Sync(); err != nil {
+	if err := fs.File.Sync(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (fs *FileStorage) SyncByInterval(st Storage, ch chan bool) error {
-	if fs.storeInterval == 0 {
+func (fs *FileStorage) SyncByInterval(ctx context.Context, storage repository.Storage, ch chan bool) error {
+	if fs.StoreInterval == 0 {
 		close(ch)
 		return nil
 	}
 
-	storeIntervalDuration := time.Duration(fs.storeInterval) * time.Second
+	storeIntervalDuration := time.Duration(fs.StoreInterval) * time.Second
 	forever := make(chan bool)
 	err := func() error {
 		for {
@@ -122,7 +134,7 @@ func (fs *FileStorage) SyncByInterval(st Storage, ch chan bool) error {
 				return nil
 			default:
 				<-time.After(storeIntervalDuration)
-				if err := fs.Sync(st); err != nil {
+				if err := fs.Sync(ctx, storage); err != nil {
 					return err
 				}
 			}
