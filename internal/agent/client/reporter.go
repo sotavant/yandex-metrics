@@ -101,14 +101,18 @@ func sendRequest(jsonData []byte, url string) {
 	intervals := utils.GetRetryWaitTimes()
 	retries := len(intervals) + 1
 	counter := 1
+	data := getCompressedData(jsonData)
 
 	for counter <= retries {
 		client := resty.New()
-		_, err := client.R().
+		req := client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Content-Encoding", "gzip").
-			SetBody(getCompressedData(jsonData)).
-			Post("http://" + config.AppConfig.Addr + url)
+			SetBody(data)
+
+		req = addHashData(req, data)
+
+		_, err := req.Post("http://" + config.AppConfig.Addr + url)
 
 		if err != nil {
 			internal.Logger.Infoln("error in request", err)
@@ -138,4 +142,19 @@ func getCompressedData(data []byte) *bytes.Buffer {
 	}
 
 	return buf
+}
+
+func addHashData(req *resty.Request, buf *bytes.Buffer) *resty.Request {
+	if config.AppConfig.HashKey == "" {
+		return req
+	}
+
+	hash, err := utils.GetHash(buf.Bytes(), config.AppConfig.HashKey)
+	if err != nil {
+		internal.Logger.Infoln("error in get hash", err)
+		panic(err)
+	}
+
+	req.SetHeader(utils.HasherHeaderKey, hash)
+	return req
 }

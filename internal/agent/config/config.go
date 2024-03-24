@@ -14,6 +14,7 @@ const (
 	addressVar     = `ADDRESS`
 	reportIntVar   = `REPORT_INTERVAL`
 	pollIntVar     = `POLL_INTERVAL`
+	HashKeyVar     = `KEY`
 )
 
 var AppConfig *Config
@@ -22,6 +23,7 @@ type Config struct {
 	Addr           string
 	ReportInterval int
 	PollInterval   int
+	HashKey        string
 }
 
 func InitConfig() {
@@ -33,6 +35,8 @@ func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Addr, "a", serverAddress, "server address")
 	flag.IntVar(&c.PollInterval, "p", pollInterval, "pollInterval")
 	flag.IntVar(&c.ReportInterval, "r", reportInterval, "reportInterval")
+	flag.StringVar(&c.HashKey, "k", "", "hash key")
+
 	flag.Parse()
 
 	if envAddr := os.Getenv(addressVar); envAddr != "" {
@@ -53,5 +57,9 @@ func (c *Config) ParseFlags() {
 		} else {
 			fmt.Println(err)
 		}
+	}
+
+	if hashKey := os.Getenv(HashKeyVar); hashKey != "" {
+		c.HashKey = hashKey
 	}
 }

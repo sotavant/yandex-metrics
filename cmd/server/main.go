@@ -53,13 +53,19 @@ func main() {
 func initRouters(app *server.App) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Post("/update/{type}/{name}/{value}", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateHandler(app))))
-	r.Get("/value/{type}/{name}", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValueHandler(app))))
-	r.Post("/update/", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateJSONHandler(app))))
-	r.Post("/updates/", midleware.WithLogging(midleware.GzipMiddleware(handlers.UpdateBatchJSONHandler(app))))
-	r.Post("/value/", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValueJSONHandler(app))))
-	r.Get("/", midleware.WithLogging(midleware.GzipMiddleware(handlers.GetValuesHandler(app))))
-	r.Get("/ping", midleware.WithLogging(midleware.GzipMiddleware(handlers.PingDBHandler(app.DBConn))))
+	hasher := midleware.NewHasher(app.Config.HashKey)
+
+	r.Use(midleware.GzipMiddleware)
+	r.Use(midleware.WithLogging)
+	r.Use(hasher.Handler)
+
+	r.Post("/update/{type}/{name}/{value}", handlers.UpdateHandler(app))
+	r.Get("/value/{type}/{name}", handlers.GetValueHandler(app))
+	r.Post("/update/", handlers.UpdateJSONHandler(app))
+	r.Post("/updates/", handlers.UpdateBatchJSONHandler(app))
+	r.Post("/value/", handlers.GetValueJSONHandler(app))
+	r.Get("/", handlers.GetValuesHandler(app))
+	r.Get("/ping", handlers.PingDBHandler(app.DBConn))
 
 	return r
 }

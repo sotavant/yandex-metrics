@@ -14,6 +14,7 @@ func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, re
 		var m internal.Metrics
 
 		if err := json.NewDecoder(req.Body).Decode(&m); err != nil {
+			internal.Logger.Infow("decode error", "err", err)
 			http.Error(res, err.Error(), http.StatusBadRequest)
 			return
 		}
