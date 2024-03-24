@@ -70,7 +70,7 @@ func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, re
 
 		if appInstance.Fs != nil && appInstance.Fs.StoreInterval == 0 {
 			if err = appInstance.Fs.Sync(req.Context(), appInstance.Storage); err != nil {
-				internal.Logger.Infow("error in sync")
+				internal.Logger.Infow("error in sync", "err", err)
 				http.Error(res, "internal server error", http.StatusInternalServerError)
 				return
 			}

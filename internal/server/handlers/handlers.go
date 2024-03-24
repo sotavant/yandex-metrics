@@ -108,20 +108,7 @@ func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *
 			return
 		}
 
-		if len(gaugeValues) != 0 {
-			keys := make([]string, 0, len(gaugeValues))
-			for k := range gaugeValues {
-				keys = append(keys, k)
-			}
-
-			sort.Strings(keys)
-
-			for _, k := range keys {
-				resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, gaugeValues[k]), "0"), "."))
-			}
-		} else {
-			resp = "no value"
-		}
+		resp = getHtmlResponseForGaugeList(gaugeValues)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf8")
 		_, err = fmt.Fprint(w, resp)
@@ -168,4 +155,23 @@ func parseValue[T float64 | int64](mType, mValue string) (T, error) {
 	}
 
 	return T(0), nil
+}
+
+func getHtmlResponseForGaugeList(gaugeValues map[string]float64) (resp string) {
+	if len(gaugeValues) != 0 {
+		keys := make([]string, 0, len(gaugeValues))
+		for k := range gaugeValues {
+			keys = append(keys, k)
+		}
+
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, gaugeValues[k]), "0"), "."))
+		}
+	} else {
+		resp = "no value"
+	}
+
+	return
 }

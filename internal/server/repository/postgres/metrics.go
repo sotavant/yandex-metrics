@@ -203,7 +203,6 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 	case internal.CounterType:
 		query = strings.ReplaceAll(query, "#F#", "delta")
 		for counter <= retries {
-			internal.Logger.Infow("hear", "err", err)
 			if m.connectionIsBroken() {
 				m.conn, err = InitDB(ctx, m.DSN)
 				if err != nil {

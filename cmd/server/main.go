@@ -30,6 +30,7 @@ func main() {
 
 	go func() {
 		err = http.ListenAndServe(appInstance.Config.Addr, r)
+
 		if err != nil {
 			close(httpChan)
 			panic(err)
