@@ -30,3 +30,8 @@ git fetch template && git checkout template/main .github
 При мёрже ветки с инкрементом в основную ветку `main` будут запускаться все автотесты.
 
 Подробнее про локальный и автоматический запуск читайте в [README автотестов](https://github.com/Yandex-Practicum/go-autotests).
+
+## Локальное тестирование
+
+TABLE_NAME=test_table DATABASE_DSN="postgres://ya_metrics:ya_metrics@localhost:5432/ya_metrics?sslmode=disable"; go test
+-v ./...

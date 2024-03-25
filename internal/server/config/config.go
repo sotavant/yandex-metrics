@@ -13,6 +13,7 @@ const (
 	restoreVar           = `RESTORE`
 	databaseDSNVar       = `DATABASE_DSN`
 	tableNameVar         = `TABLE_NAME`
+	HashKeyVar           = `KEY`
 	DefaultServerAddress = "localhost:8080"
 	DefaultTableName     = "metric"
 )
@@ -24,6 +25,7 @@ type Config struct {
 	Restore         bool
 	DatabaseDSN     string
 	TableName       string
+	HashKey         string
 }
 
 func InitConfig() *Config {
@@ -39,6 +41,7 @@ func (c *Config) ParseFlags() {
 	flag.StringVar(&c.FileStoragePath, "f", "/tmp/metrics-db.json", "file storage path")
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database DSN")
 	flag.StringVar(&c.TableName, "t", DefaultTableName, "table name")
+	flag.StringVar(&c.HashKey, "k", "", "hash key")
 
 	flag.Parse()
 
@@ -74,5 +77,9 @@ func (c *Config) ParseFlags() {
 
 	if tblName := os.Getenv(tableNameVar); tblName != "" {
 		c.TableName = tblName
+	}
+
+	if hashKey := os.Getenv(HashKeyVar); hashKey != "" {
+		c.HashKey = hashKey
 	}
 }

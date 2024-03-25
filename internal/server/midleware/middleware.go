@@ -18,7 +18,7 @@ func getTypesForEncoding() [3]string {
 	}
 }
 
-func WithLogging(h http.HandlerFunc) http.HandlerFunc {
+func WithLogging(h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		uri := r.RequestURI
@@ -50,11 +50,11 @@ func WithLogging(h http.HandlerFunc) http.HandlerFunc {
 		)
 	}
 
-	return logFn
+	return http.HandlerFunc(logFn)
 }
 
-func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func GzipMiddleware(h http.Handler) http.Handler {
+	gzipFn := func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 		if isNeedEncoding(r) {
 			contentEncoding := r.Header.Get("Content-Encoding")
@@ -68,7 +68,7 @@ func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 				}
 				r.Body = cr
 				defer func(cr *server.CompressReader) {
-					err := cr.Close()
+					err = cr.Close()
 					if err != nil {
 						internal.Logger.Infow("compressReaderCloseError", "err", err)
 						w.WriteHeader(http.StatusInternalServerError)
@@ -97,6 +97,8 @@ func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 
 		h.ServeHTTP(ow, r)
 	}
+
+	return http.HandlerFunc(gzipFn)
 }
 
 func isNeedEncoding(r *http.Request) bool {
