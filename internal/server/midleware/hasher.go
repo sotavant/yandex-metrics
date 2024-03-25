@@ -61,11 +61,8 @@ func (h *Hasher) checkHash(reqHash string, r *http.Request) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	r.Body = io.NopCloser(bytes.NewBuffer(body))
 
-	if err != nil {
-		return false, err
-	}
+	r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	bodyHash, err := utils.GetHash(body, h.key)
 	if err != nil {
