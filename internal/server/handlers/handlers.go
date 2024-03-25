@@ -108,7 +108,7 @@ func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *
 			return
 		}
 
-		resp = getHtmlResponseForGaugeList(gaugeValues)
+		resp = getHTMLResponseForGaugeList(gaugeValues)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf8")
 		_, err = fmt.Fprint(w, resp)
@@ -157,7 +157,7 @@ func parseValue[T float64 | int64](mType, mValue string) (T, error) {
 	return T(0), nil
 }
 
-func getHtmlResponseForGaugeList(gaugeValues map[string]float64) (resp string) {
+func getHTMLResponseForGaugeList(gaugeValues map[string]float64) (resp string) {
 	if len(gaugeValues) != 0 {
 		keys := make([]string, 0, len(gaugeValues))
 		for k := range gaugeValues {
