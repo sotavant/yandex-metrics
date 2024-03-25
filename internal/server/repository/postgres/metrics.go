@@ -60,7 +60,6 @@ func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value
 		on conflict on constraint #T#_pk do update set id = $1, type = $2, value = $3;`)
 
 	for counter <= retries {
-		internal.Logger.Infow("hear", "err", err)
 		if m.connectionIsBroken() {
 			m.conn, err = InitDB(ctx, m.DSN)
 			if err != nil {
@@ -229,7 +228,6 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 	case internal.GaugeType:
 		query = strings.ReplaceAll(query, "#F#", "value")
 		for counter <= retries {
-			internal.Logger.Infow("hear", "err", err)
 			if m.connectionIsBroken() {
 				m.conn, err = InitDB(ctx, m.DSN)
 				if err != nil {

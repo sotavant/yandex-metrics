@@ -55,9 +55,9 @@ func initRouters(app *server.App) *chi.Mux {
 
 	hasher := midleware.NewHasher(app.Config.HashKey)
 
+	r.Use(hasher.Handler)
 	r.Use(midleware.GzipMiddleware)
 	r.Use(midleware.WithLogging)
-	r.Use(hasher.Handler)
 
 	r.Post("/update/{type}/{name}/{value}", handlers.UpdateHandler(app))
 	r.Get("/value/{type}/{name}", handlers.GetValueHandler(app))

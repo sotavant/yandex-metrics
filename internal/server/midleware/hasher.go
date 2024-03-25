@@ -20,14 +20,8 @@ func NewHasher(key string) *Hasher {
 func (h *Hasher) Handler(next http.Handler) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) {
 		ow := w
-		if h.key != "" {
-			hash := r.Header.Get(utils.HasherHeaderKey)
-			if hash == "" {
-				internal.Logger.Infow("empty hash in header")
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-
+		hash := r.Header.Get(utils.HasherHeaderKey)
+		if h.key != "" && hash != "" {
 			check, err := h.checkHash(hash, r)
 			if err != nil {
 				internal.Logger.Infow("error in check hash", "err", err)
