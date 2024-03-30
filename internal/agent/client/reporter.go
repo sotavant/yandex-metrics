@@ -22,7 +22,8 @@ const (
 	poolCounterName = `PollCount`
 )
 
-func ReportMetric(ms *storage.MetricsStorage) {
+func ReportMetric(ms *storage.MetricsStorage, workerCount int) {
+
 	//sendGauge(ms)
 	//sendCounter(ms)
 	sendBatchMetrics(ms)

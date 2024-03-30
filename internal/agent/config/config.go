@@ -2,7 +2,7 @@ package config
 
 import (
 	"flag"
-	"fmt"
+	"github.com/sotavant/yandex-metrics/internal"
 	"os"
 	"strconv"
 )
@@ -10,11 +10,13 @@ import (
 const (
 	pollInterval   = 2
 	reportInterval = 10
+	rateLimit      = 10
 	serverAddress  = `localhost:8080`
 	addressVar     = `ADDRESS`
 	reportIntVar   = `REPORT_INTERVAL`
 	pollIntVar     = `POLL_INTERVAL`
 	HashKeyVar     = `KEY`
+	RateLimitVar   = `RATE_LIMIT`
 )
 
 var AppConfig *Config
@@ -24,6 +26,7 @@ type Config struct {
 	ReportInterval int
 	PollInterval   int
 	HashKey        string
+	RateLimit      int
 }
 
 func InitConfig() {
@@ -33,9 +36,10 @@ func InitConfig() {
 
 func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Addr, "a", serverAddress, "server address")
+	flag.StringVar(&c.HashKey, "k", "", "hash key")
 	flag.IntVar(&c.PollInterval, "p", pollInterval, "pollInterval")
 	flag.IntVar(&c.ReportInterval, "r", reportInterval, "reportInterval")
-	flag.StringVar(&c.HashKey, "k", "", "hash key")
+	flag.IntVar(&c.RateLimit, "l", rateLimit, "rate limit")
 
 	flag.Parse()
 
@@ -55,7 +59,16 @@ func (c *Config) ParseFlags() {
 		if err == nil {
 			c.PollInterval = pollIntervalEnvVal
 		} else {
-			fmt.Println(err)
+			internal.Logger.Infow("poll interval convert error", "err", err)
+		}
+	}
+
+	if rateLimit := os.Getenv(RateLimitVar); rateLimit != "" {
+		rateLimitEnvVal, err := strconv.Atoi(rateLimit)
+		if err == nil {
+			c.RateLimit = rateLimitEnvVal
+		} else {
+			internal.Logger.Infow("rate limit convert error", "err", err)
 		}
 	}
 

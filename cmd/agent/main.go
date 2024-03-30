@@ -9,11 +9,11 @@ import (
 )
 
 func main() {
+	internal.InitLogger()
 	config.InitConfig()
 
 	var poolIntervalDuration = time.Duration(config.AppConfig.PollInterval) * time.Second
 	var reportIntervalDuration = time.Duration(config.AppConfig.ReportInterval) * time.Second
-	internal.InitLogger()
 	ms := storage.NewStorage()
 	forever1 := make(chan bool)
 	forever2 := make(chan bool)
@@ -37,7 +37,7 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				client.ReportMetric(ms)
+				client.ReportMetric(ms, config.AppConfig.RateLimit)
 			}
 		}
 	}()
