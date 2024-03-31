@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
@@ -11,6 +11,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
+	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -30,13 +31,12 @@ func Test_getValueHandler(t *testing.T) {
 	assert.NoError(t, err)
 
 	if conn != nil {
-		defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+		defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 			err = test.DropTable(ctx, conn, tableName)
 			assert.NoError(t, err)
 
-			err = conn.Close(ctx)
-			assert.NoError(t, err)
-		}(ctx, *conn, tableName)
+			conn.Close()
+		}(ctx, conn, tableName)
 	}
 
 	tests := []struct {
@@ -323,7 +323,7 @@ func Test_pingDBHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dbConn, _ := postgres.InitDB(ctx, tt.conf.DatabaseDSN)
+			dbConn, _ := storage.InitDB(ctx, tt.conf.DatabaseDSN)
 			h := http.HandlerFunc(PingDBHandler(dbConn))
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
 			w := httptest.NewRecorder()

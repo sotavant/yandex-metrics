@@ -17,6 +17,19 @@ func main() {
 	ms := storage.NewStorage()
 	forever1 := make(chan bool)
 	forever2 := make(chan bool)
+	forever3 := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case <-forever3:
+				return
+			default:
+				<-time.After(poolIntervalDuration)
+				ms.UpdateAdditionalValues()
+			}
+		}
+	}()
 
 	go func() {
 		for {
@@ -44,4 +57,5 @@ func main() {
 
 	<-forever2
 	<-forever1
+	<-forever3
 }

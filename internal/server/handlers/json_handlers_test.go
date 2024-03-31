@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/midleware"
@@ -331,13 +331,13 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 	}
 
 	if conn != nil {
-		defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+		defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 			err = test.DropTable(ctx, conn, tableName)
 			assert.NoError(t, err)
 
-			err = conn.Close(ctx)
+			conn.Close()
 			assert.NoError(t, err)
-		}(ctx, *conn, tableName)
+		}(ctx, conn, tableName)
 	}
 
 	type want struct {

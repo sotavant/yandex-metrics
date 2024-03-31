@@ -4,28 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/utils"
+	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"strings"
-	"time"
 )
 
 type MetricsRepository struct {
-	conn      *pgx.Conn
+	conn      *pgxpool.Pool
 	tableName string
 	DSN       string
 }
 
-func NewMemStorage(ctx context.Context, conn *pgx.Conn, tableName string, DSN string) (*MetricsRepository, error) {
+func NewMemStorage(ctx context.Context, conn *pgxpool.Pool, tableName string, DSN string) (*MetricsRepository, error) {
 	err := conn.Ping(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error in ping: %s", err)
 	}
 
-	err = CreateTable(ctx, *conn, tableName)
+	err = CreateTable(ctx, conn, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("error in creating table: %s", err)
 	}
@@ -33,7 +31,13 @@ func NewMemStorage(ctx context.Context, conn *pgx.Conn, tableName string, DSN st
 	return &MetricsRepository{conn, tableName, DSN}, nil
 }
 
-func CreateTable(ctx context.Context, conn pgx.Conn, tableName string) error {
+func CreateTable(ctx context.Context, conn *pgxpool.Pool, tableName string) error {
+	connAlive := storage.CheckConnection(ctx, conn)
+
+	if !connAlive {
+		return errors.New("unable to connect")
+	}
+
 	query := strings.ReplaceAll(`create table if not exists #T
 		(
 			id    varchar not null,
@@ -50,39 +54,18 @@ func CreateTable(ctx context.Context, conn pgx.Conn, tableName string) error {
 }
 
 func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value float64) error {
-	var pgErr *pgconn.PgError
 	var err error
-	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
-	counter := 1
+
 	query := m.setTableName(`insert into #T# (id, type, value)
 		values ($1, $2, $3)
 		on conflict on constraint #T#_pk do update set id = $1, type = $2, value = $3;`)
 
-	for counter <= retries {
-		if m.connectionIsBroken() {
-			m.conn, err = InitDB(ctx, m.DSN)
-			if err != nil {
-				counter++
-				time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-				continue
-			}
-		}
-		if m.conn != nil {
-			_, err = m.conn.Exec(ctx, query, key, internal.GaugeType, value)
-		}
-		if err != nil {
-			if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-				internal.Logger.Infow("error in query", "err", err)
-			} else {
-				break
-			}
-		} else if m.conn != nil && !m.conn.IsClosed() {
-			break
-		}
-		counter++
-		time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
+	connAlive := storage.CheckConnection(ctx, m.conn)
+	if !connAlive {
+		return errors.New("unable to connect")
 	}
+
+	_, err = m.conn.Exec(ctx, query, key, internal.GaugeType, value)
 
 	return err
 }
@@ -90,41 +73,19 @@ func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value
 func (m *MetricsRepository) AddCounterValue(ctx context.Context, key string, value int64) error {
 	var delta int64
 	var err error
-	var pgErr *pgconn.PgError
 	selectQuery := m.setTableName(`select delta from #T# where type = $1 and id = $2`)
 	insertQuery := m.setTableName(`insert into #T# (id, type, delta) values ($1, $2, $3)`)
 	updateQuery := m.setTableName(`update #T# set delta = $1 where id = $2 and type = $3`)
-	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
-	counter := 1
 
-	for counter <= retries {
-		if m.connectionIsBroken() {
-			m.conn, err = InitDB(ctx, m.DSN)
-			if err != nil {
-				counter++
-				time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-				continue
-			}
-		}
-		if m.conn != nil {
-			err = m.conn.QueryRow(ctx, selectQuery, internal.CounterType, key).Scan(&delta)
-		}
-		if err != nil {
-			if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-				internal.Logger.Infow("error in query", "err", err)
-			} else {
-				break
-			}
-		} else if m.conn != nil && !m.conn.IsClosed() {
-			break
-		}
-		counter++
-		time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
+	connAlive := storage.CheckConnection(ctx, m.conn)
+	if !connAlive {
+		return errors.New("unable to connect")
 	}
 
+	err = m.conn.QueryRow(ctx, selectQuery, internal.CounterType, key).Scan(&delta)
+
 	switch {
-	case err == nil && m.conn != nil:
+	case err == nil:
 		_, err = m.conn.Exec(ctx, updateQuery, value+delta, key, internal.CounterType)
 		if err != nil {
 			internal.Logger.Infow("error in update", "err", err)
@@ -167,7 +128,13 @@ func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Me
 		return err
 	}
 
-	defer tx.Rollback(ctx)
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err = tx.Rollback(ctx)
+		if err != nil {
+			internal.Logger.Infow("error in rollback transaction", err, err)
+			panic(err)
+		}
+	}(tx, ctx)
 
 	for _, metric := range metrics {
 		switch metric.MType {
@@ -190,67 +157,22 @@ func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Me
 func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (interface{}, error) {
 	var delta int64
 	var value float64
-	var pgErr *pgconn.PgError
 	var err error
-	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
-	counter := 1
+
+	connAlive := storage.CheckConnection(ctx, m.conn)
+	if !connAlive {
+		return nil, errors.New("unable to connect")
+	}
 
 	query := m.setTableName(`select #F# from #T# where type = $1 and id = $2`)
 
 	switch mType {
 	case internal.CounterType:
 		query = strings.ReplaceAll(query, "#F#", "delta")
-		for counter <= retries {
-			if m.connectionIsBroken() {
-				m.conn, err = InitDB(ctx, m.DSN)
-				if err != nil {
-					counter++
-					time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-					continue
-				}
-			}
-			if m.conn != nil {
-				err = m.conn.QueryRow(ctx, query, internal.CounterType, key).Scan(&delta)
-			}
-			if err != nil {
-				if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-					internal.Logger.Infow("error in query", "err", err)
-				} else {
-					break
-				}
-			} else if m.conn != nil && !m.conn.IsClosed() {
-				break
-			}
-			counter++
-			time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-		}
+		err = m.conn.QueryRow(ctx, query, internal.CounterType, key).Scan(&delta)
 	case internal.GaugeType:
 		query = strings.ReplaceAll(query, "#F#", "value")
-		for counter <= retries {
-			if m.connectionIsBroken() {
-				m.conn, err = InitDB(ctx, m.DSN)
-				if err != nil {
-					counter++
-					time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-					continue
-				}
-			}
-			if m.conn != nil {
-				err = m.conn.QueryRow(ctx, query, internal.GaugeType, key).Scan(&value)
-			}
-			if err != nil {
-				if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-					internal.Logger.Infow("error in query", "err", err)
-				} else {
-					break
-				}
-			} else if m.conn != nil && !m.conn.IsClosed() {
-				break
-			}
-			counter++
-			time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-		}
+		err = m.conn.QueryRow(ctx, query, internal.GaugeType, key).Scan(&value)
 	default:
 		return nil, nil
 	}
@@ -274,39 +196,17 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 }
 
 func (m *MetricsRepository) GetValues(ctx context.Context) ([]internal.Metrics, error) {
-	var pgErr *pgconn.PgError
 	var err error
 	var rows pgx.Rows
-	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
-	counter := 1
 	metrics := make([]internal.Metrics, 0)
 
-	query := m.setTableName(`select type, id, value, delta from #T#`)
-	for counter <= retries {
-		if m.connectionIsBroken() {
-			m.conn, err = InitDB(ctx, m.DSN)
-			if err != nil {
-				counter++
-				time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-				continue
-			}
-		}
-		if m.conn != nil {
-			rows, err = m.conn.Query(ctx, query)
-		}
-		if err != nil {
-			if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-				internal.Logger.Infow("error in query", "err", err)
-			} else {
-				break
-			}
-		} else if m.conn != nil && !m.conn.IsClosed() {
-			break
-		}
-		counter++
-		time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
+	connAlive := storage.CheckConnection(ctx, m.conn)
+	if !connAlive {
+		return metrics, errors.New("unable to connect")
 	}
+
+	query := m.setTableName(`select type, id, value, delta from #T#`)
+	rows, err = m.conn.Query(ctx, query)
 
 	switch {
 	case err != nil:
@@ -331,40 +231,16 @@ func (m *MetricsRepository) GetValues(ctx context.Context) ([]internal.Metrics, 
 }
 
 func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bool, error) {
-	var pgErr *pgconn.PgError
 	var err error
-	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
-	counter := 1
-
 	var count int
 
-	query := m.setTableName(`select count(*) from #T# where type = $1 and id = $2 limit 1`)
-
-	for counter <= retries {
-		if m.connectionIsBroken() {
-			m.conn, err = InitDB(ctx, m.DSN)
-			if err != nil {
-				counter++
-				time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-				continue
-			}
-		}
-		if m.conn != nil {
-			err = m.conn.QueryRow(ctx, query, mType, key).Scan(&count)
-		}
-		if err != nil {
-			if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-				internal.Logger.Infow("error in query", "err", err)
-			} else {
-				break
-			}
-		} else if m.conn != nil && !m.conn.IsClosed() {
-			break
-		}
-		counter++
-		time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
+	connAlive := storage.CheckConnection(ctx, m.conn)
+	if !connAlive {
+		return false, errors.New("unable to connect")
 	}
+
+	query := m.setTableName(`select count(*) from #T# where type = $1 and id = $2 limit 1`)
+	err = m.conn.QueryRow(ctx, query, mType, key).Scan(&count)
 
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		internal.Logger.Infow("error in select count", "err", err)
@@ -375,39 +251,17 @@ func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bo
 }
 
 func (m *MetricsRepository) GetGauge(ctx context.Context) (map[string]float64, error) {
-	var pgErr *pgconn.PgError
 	var err error
 	var rows pgx.Rows
-	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
-	counter := 1
 	res := make(map[string]float64)
-	query := m.setTableName(`select id, value from #T# where type = $1`)
 
-	for counter <= retries {
-		if m.connectionIsBroken() {
-			m.conn, err = InitDB(ctx, m.DSN)
-			if err != nil {
-				counter++
-				time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-				continue
-			}
-		}
-		if m.conn != nil {
-			rows, err = m.conn.Query(ctx, query, internal.GaugeType)
-		}
-		if err != nil {
-			if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-				internal.Logger.Infow("error in query", "err", err)
-			} else {
-				break
-			}
-		} else if m.conn != nil && !m.conn.IsClosed() {
-			break
-		}
-		counter++
-		time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
+	connAlive := storage.CheckConnection(ctx, m.conn)
+	if !connAlive {
+		return res, errors.New("unable to connect")
 	}
+
+	query := m.setTableName(`select id, value from #T# where type = $1`)
+	rows, err = m.conn.Query(ctx, query, internal.GaugeType)
 
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		internal.Logger.Infow("error in select rows", "err", err)
@@ -441,40 +295,17 @@ func (m *MetricsRepository) GetGaugeValue(ctx context.Context, key string) (floa
 }
 
 func (m *MetricsRepository) GetCounters(ctx context.Context) (map[string]int64, error) {
-	var pgErr *pgconn.PgError
 	var err error
 	var rows pgx.Rows
-	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
-	counter := 1
 	res := make(map[string]int64)
-	query := m.setTableName(`select id, delta from #T# where type = $1`)
 
-	for counter <= retries {
-		internal.Logger.Infow("hear", "err", err)
-		if m.connectionIsBroken() {
-			m.conn, err = InitDB(ctx, m.DSN)
-			if err != nil {
-				counter++
-				time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
-				continue
-			}
-		}
-		if m.conn != nil {
-			rows, err = m.conn.Query(ctx, query, internal.CounterType)
-		}
-		if err != nil {
-			if m.conn.IsClosed() || (errors.As(err, &pgErr) && (pgerrcode.IsOperatorIntervention(pgErr.Code) || pgerrcode.IsConnectionException(pgErr.Code))) {
-				internal.Logger.Infow("error in query", "err", err)
-			} else {
-				break
-			}
-		} else if m.conn != nil && !m.conn.IsClosed() {
-			break
-		}
-		counter++
-		time.Sleep(time.Duration(intervals[counter-1]) * time.Second)
+	connAlive := storage.CheckConnection(ctx, m.conn)
+	if !connAlive {
+		return res, errors.New("unable to connect")
 	}
+
+	query := m.setTableName(`select id, delta from #T# where type = $1`)
+	rows, err = m.conn.Query(ctx, query, internal.CounterType)
 
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		internal.Logger.Infow("error in select rows", "err", err)
@@ -509,21 +340,4 @@ func (m *MetricsRepository) GetCounterValue(ctx context.Context, key string) (in
 
 func (m *MetricsRepository) setTableName(query string) string {
 	return strings.ReplaceAll(query, "#T#", m.tableName)
-}
-
-func InitDB(ctx context.Context, DSN string) (*pgx.Conn, error) {
-	if DSN == "" {
-		return nil, nil
-	}
-
-	dbConn, err := pgx.Connect(ctx, DSN)
-	if err != nil {
-		internal.Logger.Infow("Unable to connect to database", "err", err)
-	}
-
-	return dbConn, nil
-}
-
-func (m *MetricsRepository) connectionIsBroken() bool {
-	return m.conn == nil || m.conn.IsClosed()
 }

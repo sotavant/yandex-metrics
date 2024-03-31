@@ -4,20 +4,26 @@ import (
 	"context"
 	"fmt"
 	"github.com/sotavant/yandex-metrics/internal"
+	"sync"
 )
 
 type MetricsRepository struct {
 	Gauge   map[string]float64
 	Counter map[string]int64
+	mutex   sync.RWMutex
 }
 
 func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value float64) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.Gauge[key] = value
 
 	return nil
 }
 
 func (m *MetricsRepository) AddCounterValue(ctx context.Context, key string, value int64) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.Counter[key] += value
 
 	return nil
@@ -50,6 +56,9 @@ func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Me
 }
 
 func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (interface{}, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	switch mType {
 	case internal.GaugeType:
 		val, ok := m.Gauge[key]
@@ -67,6 +76,9 @@ func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (in
 }
 
 func (m *MetricsRepository) GetValues(ctx context.Context) ([]internal.Metrics, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	metrics := make([]internal.Metrics, 0, len(m.Gauge)+len(m.Counter))
 
 	for k, v := range m.Gauge {
@@ -91,6 +103,9 @@ func (m *MetricsRepository) GetValues(ctx context.Context) ([]internal.Metrics, 
 }
 
 func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bool, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	switch mType {
 	case internal.GaugeType:
 		_, ok := m.Gauge[key]
@@ -108,18 +123,30 @@ func (m *MetricsRepository) KeyExist(ctx context.Context, mType, key string) (bo
 }
 
 func (m *MetricsRepository) GetGauge(ctx context.Context) (map[string]float64, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	return m.Gauge, nil
 }
 
 func (m *MetricsRepository) GetGaugeValue(ctx context.Context, key string) (float64, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	return m.Gauge[key], nil
 }
 
 func (m *MetricsRepository) GetCounters(ctx context.Context) (map[string]int64, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	return m.Counter, nil
 }
 
 func (m *MetricsRepository) GetCounterValue(ctx context.Context, key string) (int64, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	return m.Counter[key], nil
 }
 

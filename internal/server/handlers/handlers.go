@@ -3,9 +3,10 @@ package handlers
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"net/http"
 	"sort"
 	"strconv"
@@ -99,8 +100,6 @@ func GetValueHandler(appInstance *server.App) func(w http.ResponseWriter, req *h
 
 func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var resp = ""
-
 		gaugeValues, err := appInstance.Storage.GetGauge(req.Context())
 		if err != nil {
 			internal.Logger.Infow("get gauge values error", "err", err)
@@ -108,7 +107,7 @@ func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *
 			return
 		}
 
-		resp = getHTMLResponseForGaugeList(gaugeValues)
+		resp := getHTMLResponseForGaugeList(gaugeValues)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf8")
 		_, err = fmt.Fprint(w, resp)
@@ -119,15 +118,15 @@ func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *
 	}
 }
 
-func PingDBHandler(dbConn *pgx.Conn) func(w http.ResponseWriter, req *http.Request) {
+func PingDBHandler(dbConn *pgxpool.Pool) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if dbConn == nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		err := dbConn.Ping(req.Context())
-		if err != nil {
+		connAlive := storage.CheckConnection(req.Context(), dbConn)
+		if !connAlive {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}

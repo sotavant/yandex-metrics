@@ -2,7 +2,6 @@ package server
 
 import (
 	"compress/gzip"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -27,7 +26,6 @@ func NewCompressWriter(w http.ResponseWriter) *CompressWriter {
 func NewCompressReader(r io.ReadCloser) (*CompressReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
-		fmt.Println("lajer")
 		return nil, err
 	}
 

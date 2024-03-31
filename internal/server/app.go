@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
@@ -14,14 +14,14 @@ type App struct {
 	Config  *config.Config
 	Storage repository.Storage
 	Fs      *storage.FileStorage
-	DBConn  *pgx.Conn
+	DBConn  *pgxpool.Pool
 }
 
 func InitApp(ctx context.Context) (*App, error) {
 	var err error
 
 	conf := config.InitConfig()
-	dbConn, err := postgres.InitDB(ctx, conf.DatabaseDSN)
+	dbConn, err := storage.InitDB(ctx, conf.DatabaseDSN)
 	if err != nil {
 		panic(err)
 	}
