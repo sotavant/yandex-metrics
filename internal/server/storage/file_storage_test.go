@@ -130,48 +130,36 @@ func TestFileStorage_Sync(t *testing.T) {
 
 	ctx := context.Background()
 
-	tests := []struct {
-		name    string
-		storage memory.MetricsRepository
-		want    []string
-	}{
-		{
-			name: "checkWriteToFile",
-			storage: memory.MetricsRepository{
-				Gauge: map[string]float64{
-					"s": 111,
-				},
-				Counter: map[string]int64{
-					"c": 13,
-				},
+	t.Run("checkWriteToFile", func(t *testing.T) {
+		fs, _ := NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
+		ms := memory.MetricsRepository{
+			Gauge: map[string]float64{
+				"s": 111,
 			},
-			want: []string{`{"id":"s","type":"gauge","value":111}`, `{"id":"c","type":"counter","delta":13}`},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fs, _ := NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
-			ms := tt.storage
+			Counter: map[string]int64{
+				"c": 13,
+			},
+		}
+		want := []string{`{"id":"s","type":"gauge","value":111}`, `{"id":"c","type":"counter","delta":13}`}
 
-			defer func(file *os.File) {
-				err := file.Close()
-				assert.NoError(t, err)
-
-				err = os.Remove(conf.FileStoragePath)
-				assert.NoError(t, err)
-			}(fs.File)
-
-			err := fs.Sync(ctx, &ms)
+		defer func(file *os.File) {
+			err := file.Close()
 			assert.NoError(t, err)
 
-			_, err = fs.File.Seek(0, io.SeekStart)
+			err = os.Remove(conf.FileStoragePath)
 			assert.NoError(t, err)
+		}(fs.File)
 
-			data, err := os.ReadFile(fs.File.Name())
-			assert.NoError(t, err)
-			for _, str := range tt.want {
-				assert.Contains(t, string(data), str)
-			}
-		})
-	}
+		err := fs.Sync(ctx, &ms)
+		assert.NoError(t, err)
+
+		_, err = fs.File.Seek(0, io.SeekStart)
+		assert.NoError(t, err)
+
+		data, err := os.ReadFile(fs.File.Name())
+		assert.NoError(t, err)
+		for _, str := range want {
+			assert.Contains(t, string(data), str)
+		}
+	})
 }

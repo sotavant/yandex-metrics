@@ -199,10 +199,10 @@ func collectMetrics(ms *storage.MetricsStorage) []internal.Metrics {
 
 	metricLen := len(ms.Metrics)
 	if ms.PollCount != 0 {
-		metricLen += 1
+		metricLen++
 	}
 
-	res = make([]internal.Metrics, 0)
+	res = make([]internal.Metrics, 0, metricLen)
 
 	for k := range ms.Metrics {
 		val := ms.Metrics[k]
