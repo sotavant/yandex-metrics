@@ -15,14 +15,14 @@ func main() {
 	var poolIntervalDuration = time.Duration(config.AppConfig.PollInterval) * time.Second
 	var reportIntervalDuration = time.Duration(config.AppConfig.ReportInterval) * time.Second
 	ms := storage.NewStorage()
-	forever1 := make(chan bool)
-	forever2 := make(chan bool)
-	forever3 := make(chan bool)
+	updateValuesChan := make(chan bool)
+	reportMetricsChan := make(chan bool)
+	updateAddValuesChan := make(chan bool)
 
 	go func() {
 		for {
 			select {
-			case <-forever3:
+			case <-updateAddValuesChan:
 				return
 			default:
 				<-time.After(poolIntervalDuration)
@@ -34,7 +34,7 @@ func main() {
 	go func() {
 		for {
 			select {
-			case <-forever1:
+			case <-updateValuesChan:
 				return
 			default:
 				<-time.After(poolIntervalDuration)
@@ -46,7 +46,7 @@ func main() {
 	go func() {
 		for {
 			select {
-			case <-forever2:
+			case <-reportMetricsChan:
 				return
 			default:
 				<-time.After(reportIntervalDuration)
@@ -55,7 +55,7 @@ func main() {
 		}
 	}()
 
-	<-forever2
-	<-forever1
-	<-forever3
+	<-reportMetricsChan
+	<-updateValuesChan
+	<-updateAddValuesChan
 }

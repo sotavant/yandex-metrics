@@ -247,7 +247,7 @@ func TestGzipCompression(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		reqFunc := func() *http.Request {
-			req := httptest.NewRequest("POST", "/value", buf)
+			req := httptest.NewRequest(http.MethodPost, "/value", buf)
 			req.Header.Set("Content-Encoding", "gzip")
 			req.Header.Set("Accept-Encoding", "0")
 			req.Header.Set("Accept", "application/json")
@@ -277,7 +277,7 @@ func TestGzipCompression(t *testing.T) {
 		buf := bytes.NewBufferString(requestBody)
 		w := httptest.NewRecorder()
 		reqFunc := func() *http.Request {
-			req := httptest.NewRequest("POST", "/", buf)
+			req := httptest.NewRequest(http.MethodPost, "/", buf)
 			req.Header.Set("Accept-Encoding", "gzip")
 			req.Header.Set("Accept", "html/text")
 
@@ -286,7 +286,6 @@ func TestGzipCompression(t *testing.T) {
 
 		r := chi.NewRouter()
 		r.Use(midleware.GzipMiddleware)
-		//r := httptest.NewRequest(http.MethodPost, "/value", buf)
 		r.Post("/", GetValuesHandler(appInstance))
 
 		r.ServeHTTP(w, reqFunc())
