@@ -5,7 +5,8 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v5"
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/midleware"
@@ -232,8 +233,6 @@ func TestGzipCompression(t *testing.T) {
 	htmlResponse := `<p>ss: -3444</p>`
 
 	t.Run("sends_gzip", func(t *testing.T) {
-		handler := midleware.GzipMiddleware(GetValueJSONHandler(appInstance))
-
 		buf := bytes.NewBuffer(nil)
 		zb := gzip.NewWriter(buf)
 		_, err := zb.Write([]byte(requestBody))
@@ -241,16 +240,24 @@ func TestGzipCompression(t *testing.T) {
 		err = zb.Close()
 		assert.NoError(t, err)
 
-		r := httptest.NewRequest(http.MethodPost, "/value", buf)
-		r.RequestURI = ""
-		r.Header.Set("Content-Encoding", "gzip")
-		r.Header.Set("Accept-Encoding", "0")
-		r.Header.Set("Accept", "application/json")
-		r.Header.Set("Content-Type", "application/json")
+		r := chi.NewRouter()
+		r.Use(midleware.GzipMiddleware)
+		r.Post("/value", GetValueJSONHandler(appInstance))
 
 		w := httptest.NewRecorder()
 
-		handler(w, r)
+		reqFunc := func() *http.Request {
+			req := httptest.NewRequest("POST", "/value", buf)
+			req.Header.Set("Content-Encoding", "gzip")
+			req.Header.Set("Accept-Encoding", "0")
+			req.Header.Set("Accept", "application/json")
+			req.Header.Set("Content-Type", "application/json")
+
+			return req
+		}
+
+		r.ServeHTTP(w, reqFunc())
+		//handler(w, r)
 		result := w.Result()
 		defer func() {
 			err := result.Body.Close()
@@ -267,17 +274,23 @@ func TestGzipCompression(t *testing.T) {
 	})
 
 	t.Run("accept_gzip", func(t *testing.T) {
-		handler := midleware.GzipMiddleware(GetValuesHandler(appInstance))
-
 		buf := bytes.NewBufferString(requestBody)
-		r := httptest.NewRequest("POST", "/", buf)
-		r.RequestURI = ""
-		r.Header.Set("Accept-Encoding", "gzip")
-		r.Header.Set("Accept", "html/text")
-
 		w := httptest.NewRecorder()
+		reqFunc := func() *http.Request {
+			req := httptest.NewRequest("POST", "/", buf)
+			req.Header.Set("Accept-Encoding", "gzip")
+			req.Header.Set("Accept", "html/text")
 
-		handler(w, r)
+			return req
+		}
+
+		r := chi.NewRouter()
+		r.Use(midleware.GzipMiddleware)
+		//r := httptest.NewRequest(http.MethodPost, "/value", buf)
+		r.Post("/", GetValuesHandler(appInstance))
+
+		r.ServeHTTP(w, reqFunc())
+
 		result := w.Result()
 		defer func() {
 			err := result.Body.Close()
@@ -318,13 +331,13 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 	}
 
 	if conn != nil {
-		defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+		defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 			err = test.DropTable(ctx, conn, tableName)
 			assert.NoError(t, err)
 
-			err = conn.Close(ctx)
+			conn.Close()
 			assert.NoError(t, err)
-		}(ctx, *conn, tableName)
+		}(ctx, conn, tableName)
 	}
 
 	type want struct {

@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -10,7 +11,7 @@ import (
 	"testing"
 )
 
-func InitConnection(ctx context.Context, t *testing.T) (*pgx.Conn, string, string, error) {
+func InitConnection(ctx context.Context, t *testing.T) (*pgxpool.Pool, string, string, error) {
 	internal.InitLogger()
 	dns := os.Getenv("DATABASE_DSN")
 	tableName := os.Getenv("TABLE_NAME")
@@ -19,7 +20,7 @@ func InitConnection(ctx context.Context, t *testing.T) (*pgx.Conn, string, strin
 		return nil, "", "", nil
 	}
 
-	dbConn, err := pgx.Connect(ctx, dns)
+	dbConn, err := pgxpool.New(ctx, dns)
 
 	if err != nil {
 		return nil, "", "", err
@@ -30,13 +31,13 @@ func InitConnection(ctx context.Context, t *testing.T) (*pgx.Conn, string, strin
 		return nil, "", "", err
 	}
 
-	err = createTable(ctx, *dbConn, tableName)
+	err = createTable(ctx, dbConn, tableName)
 	assert.NoError(t, err)
 
 	return dbConn, tableName, dns, nil
 }
 
-func DropTable(ctx context.Context, conn pgx.Conn, tableName string) error {
+func DropTable(ctx context.Context, conn *pgxpool.Pool, tableName string) error {
 	_, err := conn.Exec(ctx, strings.ReplaceAll("drop table if exists $1", "$1", tableName))
 	return err
 }
@@ -46,7 +47,7 @@ func TruncateTable(ctx context.Context, conn pgx.Conn, tableName string) error {
 	return err
 }
 
-func createTable(ctx context.Context, conn pgx.Conn, tableName string) error {
+func createTable(ctx context.Context, conn *pgxpool.Pool, tableName string) error {
 	query := strings.ReplaceAll(`create table if not exists #T
 		(
 			id    varchar not null,

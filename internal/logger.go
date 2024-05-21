@@ -10,7 +10,12 @@ func InitLogger() {
 		panic(err)
 	}
 
-	defer logger.Sync()
+	defer func(logger *zap.Logger) {
+		err = logger.Sync()
+	}(logger)
 
+	if err != nil {
+		panic(err)
+	}
 	Logger = *logger.Sugar()
 }

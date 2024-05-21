@@ -3,7 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
 	"github.com/stretchr/testify/assert"
@@ -17,13 +17,13 @@ func TestMetricsRepository_AddGaugeValue(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err = test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
 
-		err = conn.Close(ctx)
+		conn.Close()
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	type args struct {
 		ctx   context.Context
@@ -69,10 +69,10 @@ func TestMetricsRepository_AddCounterValue(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err := test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	type args struct {
 		ctx   context.Context
@@ -137,10 +137,10 @@ func TestMetricsRepository_AddValue(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err := test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	type args struct {
 		ctx   context.Context
@@ -192,10 +192,10 @@ func TestMetricsRepository_KeyExist(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err := test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	type args struct {
 		ctx   context.Context
@@ -266,10 +266,10 @@ func TestMetricsRepository_GetGauge(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err := test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	tests := []struct {
 		name    string
@@ -318,10 +318,10 @@ func TestMetricsRepository_GetGaugeValue(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err := test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	tests := []struct {
 		name    string
@@ -372,10 +372,10 @@ func TestMetricsRepository_GetCounters(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err := test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	tests := []struct {
 		name    string
@@ -436,10 +436,10 @@ func TestMetricsRepository_GetCounterValue(t *testing.T) {
 	if conn == nil {
 		return
 	}
-	defer func(ctx context.Context, conn pgx.Conn, tableName string) {
+	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
 		err := test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
-	}(ctx, *conn, tableName)
+	}(ctx, conn, tableName)
 
 	type fields struct {
 		key   string

@@ -3,9 +3,10 @@ package handlers
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"net/http"
 	"sort"
 	"strconv"
@@ -99,8 +100,6 @@ func GetValueHandler(appInstance *server.App) func(w http.ResponseWriter, req *h
 
 func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var resp = ""
-
 		gaugeValues, err := appInstance.Storage.GetGauge(req.Context())
 		if err != nil {
 			internal.Logger.Infow("get gauge values error", "err", err)
@@ -108,20 +107,7 @@ func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *
 			return
 		}
 
-		if len(gaugeValues) != 0 {
-			keys := make([]string, 0, len(gaugeValues))
-			for k := range gaugeValues {
-				keys = append(keys, k)
-			}
-
-			sort.Strings(keys)
-
-			for _, k := range keys {
-				resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, gaugeValues[k]), "0"), "."))
-			}
-		} else {
-			resp = "no value"
-		}
+		resp := getHTMLResponseForGaugeList(gaugeValues)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf8")
 		_, err = fmt.Fprint(w, resp)
@@ -132,15 +118,15 @@ func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *
 	}
 }
 
-func PingDBHandler(dbConn *pgx.Conn) func(w http.ResponseWriter, req *http.Request) {
+func PingDBHandler(dbConn *pgxpool.Pool) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if dbConn == nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		err := dbConn.Ping(req.Context())
-		if err != nil {
+		connAlive := storage.CheckConnection(req.Context(), dbConn)
+		if !connAlive {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -168,4 +154,23 @@ func parseValue[T float64 | int64](mType, mValue string) (T, error) {
 	}
 
 	return T(0), nil
+}
+
+func getHTMLResponseForGaugeList(gaugeValues map[string]float64) (resp string) {
+	if len(gaugeValues) != 0 {
+		keys := make([]string, 0, len(gaugeValues))
+		for k := range gaugeValues {
+			keys = append(keys, k)
+		}
+
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			resp += fmt.Sprintf("<p>%s: %s</p>", k, strings.TrimRight(strings.TrimRight(fmt.Sprintf(`%f`, gaugeValues[k]), "0"), "."))
+		}
+	} else {
+		resp = "no value"
+	}
+
+	return
 }

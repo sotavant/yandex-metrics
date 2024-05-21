@@ -1,8 +1,11 @@
 package storage
 
 import (
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -34,11 +37,15 @@ const (
 	stackSysMetric      = "StackSys"
 	sysMetric           = "Sys"
 	totalAllocMetric    = "TotalAlloc"
+	totalMemory         = "TotalMemory"
+	freeMemory          = "FreeMemory"
+	CPUUtilization1     = "CPUUtilization1"
 )
 
 type MetricsStorage struct {
 	Metrics   map[string]float64
 	PollCount int64
+	RWMutex   sync.RWMutex
 }
 
 func NewStorage() *MetricsStorage {
@@ -49,6 +56,9 @@ func NewStorage() *MetricsStorage {
 }
 
 func (m *MetricsStorage) UpdateValues() {
+	m.RWMutex.Lock()
+	defer m.RWMutex.Unlock()
+
 	var rtm runtime.MemStats
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -83,4 +93,23 @@ func (m *MetricsStorage) UpdateValues() {
 	m.Metrics[totalAllocMetric] = float64(rtm.TotalAlloc)
 	m.Metrics["RandomValue"] = r.Float64()
 	m.PollCount += 1
+}
+
+func (m *MetricsStorage) UpdateAdditionalValues() {
+	m.RWMutex.Lock()
+	defer m.RWMutex.Unlock()
+
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		panic(err)
+	}
+
+	cpuTimes, err := cpu.Times(false)
+	if err != nil {
+		panic(err)
+	}
+
+	m.Metrics[totalMemory] = float64(v.Total)
+	m.Metrics[freeMemory] = float64(v.Free)
+	m.Metrics[CPUUtilization1] = cpuTimes[0].Idle
 }
