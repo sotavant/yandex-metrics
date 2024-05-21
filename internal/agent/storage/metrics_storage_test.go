@@ -16,3 +16,17 @@ func TestMetricsStorage_updateValues(t *testing.T) {
 	s.UpdateValues()
 	assert.Equal(t, int64(2), s.PollCount)
 }
+
+func BenchmarkMetricsStorage_UpdateValues(b *testing.B) {
+	s := NewStorage()
+	for n := 0; n < b.N; n++ {
+		s.UpdateValues()
+	}
+}
+
+func BenchmarkMetricsStorage_UpdateAdditionalValues(b *testing.B) {
+	s := NewStorage()
+	for n := 0; n < b.N; n++ {
+		s.UpdateAdditionalValues()
+	}
+}
