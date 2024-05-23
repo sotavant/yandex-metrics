@@ -129,10 +129,12 @@ func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Me
 	}
 
 	defer func(tx pgx.Tx, ctx context.Context) {
-		err = tx.Rollback(ctx)
 		if err != nil {
-			internal.Logger.Infow("error in rollback transaction", err, err)
-			panic(err)
+			err = tx.Rollback(ctx)
+			if err != nil {
+				internal.Logger.Infow("error in rollback transaction", err, err)
+				panic(err)
+			}
 		}
 	}(tx, ctx)
 
@@ -151,7 +153,9 @@ func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Me
 		}
 	}
 
-	return tx.Commit(ctx)
+	err = tx.Commit(ctx)
+
+	return err
 }
 
 func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (interface{}, error) {

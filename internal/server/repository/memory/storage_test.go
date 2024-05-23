@@ -163,3 +163,40 @@ func TestMemStorage_AddValue(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkMetricsRepository_AddValues(b *testing.B) {
+	m := fillMetrics()
+	b.ResetTimer()
+	ctx := context.Background()
+
+	for n := 0; n < b.N; n++ {
+		storage := NewMetricsRepository()
+		err := storage.AddValues(ctx, m)
+		assert.NoError(b, err)
+	}
+}
+
+func fillMetrics() []internal.Metrics {
+	var counter int64 = 1
+	res := make([]internal.Metrics, 0)
+
+	for i := 'a'; i < 'z'; i++ {
+		metric := internal.Metrics{
+			ID: string(i),
+		}
+
+		if counter%5 == 0 {
+			metric.MType = internal.CounterType
+			metric.Delta = &counter
+		} else {
+			gVal := float64(counter)
+			metric.MType = internal.GaugeType
+			metric.Value = &gVal
+		}
+		counter++
+
+		res = append(res, metric)
+	}
+
+	return res
+}
