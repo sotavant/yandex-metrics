@@ -5,6 +5,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/agent/client"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
+	_ "net/http/pprof"
 	"time"
 )
 
@@ -18,6 +19,9 @@ func main() {
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
 	updateAddValuesChan := make(chan bool)
+
+	// for pprof
+	//err := http.ListenAndServe(":8081")
 
 	go func() {
 		for {

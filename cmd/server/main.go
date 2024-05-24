@@ -70,7 +70,7 @@ func initRouters(app *server.App) *chi.Mux {
 	r.Get("/", handlers.GetValuesHandler(app))
 	r.Get("/ping", handlers.PingDBHandler(app.DBConn))
 
-	//initProfiling(r)
+	initProfiling(r)
 
 	return r
 }
