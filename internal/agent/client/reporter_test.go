@@ -1,13 +1,14 @@
 package client
 
 import (
-	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/agent/config"
-	storage2 "github.com/sotavant/yandex-metrics/internal/agent/storage"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/agent/config"
+	storage2 "github.com/sotavant/yandex-metrics/internal/agent/storage"
 )
 
 func BenchmarkReportMetric(b *testing.B) {

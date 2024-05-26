@@ -2,9 +2,10 @@ package config
 
 import (
 	"flag"
-	"github.com/sotavant/yandex-metrics/internal"
 	"os"
 	"strconv"
+
+	"github.com/sotavant/yandex-metrics/internal"
 )
 
 const (

@@ -1,7 +1,10 @@
 package storage
 
-import "testing"
-import "github.com/stretchr/testify/assert"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestMetricsStorage_updateValues(t *testing.T) {
 	s := NewStorage()

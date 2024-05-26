@@ -1,15 +1,16 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	storage2 "github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func Test_badTypeHandler(t *testing.T) {

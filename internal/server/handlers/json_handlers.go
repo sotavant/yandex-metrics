@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"context"
+	"net/http"
+
 	jsoniter "github.com/json-iterator/go"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
-	"net/http"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary

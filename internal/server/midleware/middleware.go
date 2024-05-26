@@ -1,11 +1,12 @@
 package midleware
 
 import (
-	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
 )
 
 const AcceptableEncoding = "gzip"

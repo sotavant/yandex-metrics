@@ -1,13 +1,14 @@
 package main
 
 import (
+	"net/http"
+	_ "net/http/pprof"
+	"time"
+
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/agent/client"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
-	"net/http"
-	_ "net/http/pprof"
-	"time"
 )
 
 func main() {

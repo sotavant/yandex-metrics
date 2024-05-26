@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"syscall"
+	"time"
+
 	"github.com/go-resty/resty/v2"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 	"github.com/sotavant/yandex-metrics/internal/utils"
-	"syscall"
-	"time"
 )
 
 const (

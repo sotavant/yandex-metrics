@@ -3,12 +3,13 @@ package storage
 import (
 	"context"
 	"encoding/json"
-	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"io"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository"
 )
 
 type FileStorage struct {

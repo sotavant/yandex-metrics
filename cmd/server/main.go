@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"net/http/pprof"
+	"sync"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
 	"github.com/sotavant/yandex-metrics/internal/server/midleware"
-	"net/http"
-	"net/http/pprof"
-	"sync"
 )
 
 func main() {

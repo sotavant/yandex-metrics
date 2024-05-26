@@ -2,11 +2,12 @@ package midleware
 
 import (
 	"bytes"
-	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/utils"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/utils"
 )
 
 type Hasher struct {

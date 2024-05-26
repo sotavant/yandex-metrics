@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+
 	"github.com/sotavant/yandex-metrics/internal"
 )
 

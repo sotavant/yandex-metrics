@@ -3,9 +3,10 @@ package memory
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMemStorage_AddGaugeValue(t *testing.T) {

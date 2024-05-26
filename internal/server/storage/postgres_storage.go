@@ -2,10 +2,11 @@ package storage
 
 import (
 	"context"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/utils"
-	"time"
 )
 
 func InitDB(ctx context.Context, DSN string) (*pgxpool.Pool, error) {

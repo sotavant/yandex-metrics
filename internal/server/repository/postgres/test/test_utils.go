@@ -2,12 +2,13 @@ package test
 
 import (
 	"context"
+	"os"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"strings"
 )
 
 func InitConnection(ctx context.Context, t assert.TestingT) (*pgxpool.Pool, string, string, error) {

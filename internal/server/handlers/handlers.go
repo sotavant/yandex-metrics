@@ -2,15 +2,16 @@ package handlers
 
 import (
 	"fmt"
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
-	"net/http"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 func UpdateHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {

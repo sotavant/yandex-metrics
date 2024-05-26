@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server"
@@ -15,11 +21,6 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 )
 
 func Test_updateJsonHandler(t *testing.T) {

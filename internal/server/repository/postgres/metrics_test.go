@@ -3,11 +3,12 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMetricsRepository_AddGaugeValue(t *testing.T) {
