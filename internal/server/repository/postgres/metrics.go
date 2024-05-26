@@ -59,6 +59,7 @@ func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value
 	query := m.setTableName(`insert into #T# (id, type, value)
 		values ($1, $2, $3)
 		on conflict on constraint #T#_pk do update set id = $1, type = $2, value = $3;`)
+	query = m.setTableName(query)
 
 	connAlive := storage.CheckConnection(ctx, m.conn)
 	if !connAlive {
