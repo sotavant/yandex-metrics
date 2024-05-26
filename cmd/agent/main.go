@@ -5,6 +5,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/agent/client"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
+	"net/http"
 	_ "net/http/pprof"
 	"time"
 )
@@ -19,9 +20,16 @@ func main() {
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
 	updateAddValuesChan := make(chan bool)
+	pprofChan := make(chan bool)
 
-	// for pprof
-	//err := http.ListenAndServe(":8081")
+	go func() {
+		err := http.ListenAndServe(":8081", nil)
+
+		if err != nil {
+			close(pprofChan)
+			panic(err)
+		}
+	}()
 
 	go func() {
 		for {
@@ -59,7 +67,20 @@ func main() {
 		}
 	}()
 
+	go func() {
+		for {
+			select {
+			case <-reportMetricsChan:
+				return
+			default:
+				<-time.After(reportIntervalDuration)
+				client.ReportMetric(ms, config.AppConfig.RateLimit)
+			}
+		}
+	}()
+
 	<-reportMetricsChan
 	<-updateValuesChan
 	<-updateAddValuesChan
+	<-pprofChan
 }
