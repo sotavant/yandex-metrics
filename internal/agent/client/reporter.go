@@ -3,9 +3,9 @@ package client
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"errors"
 	"github.com/go-resty/resty/v2"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
@@ -25,6 +25,8 @@ const (
 type Semaphore struct {
 	semaCh chan struct{}
 }
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func NewSemaphore(maxReq int) *Semaphore {
 	return &Semaphore{
@@ -159,13 +161,14 @@ func sendRequest(jsonData []byte, url string) {
 func getCompressedData(data []byte) *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
+	zb.Reset(buf)
 	_, err := zb.Write(data)
 
 	if err != nil {
 		panic(err)
 	}
 
-	if err := zb.Close(); err != nil {
+	if err = zb.Close(); err != nil {
 		panic(err)
 	}
 
