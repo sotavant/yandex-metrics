@@ -9,7 +9,6 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/midleware"
 	"net/http"
 	"net/http/pprof"
-	_ "net/http/pprof"
 	"sync"
 )
 
