@@ -343,5 +343,5 @@ func (m *MetricsRepository) GetCounterValue(ctx context.Context, key string) (in
 }
 
 func (m *MetricsRepository) setTableName(query string) string {
-	return strings.ReplaceAll(query, "#T#", m.tableName)
+	return strings.Replace(query, "#T#", m.tableName, 1)
 }

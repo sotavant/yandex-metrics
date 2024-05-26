@@ -35,3 +35,5 @@ git fetch template && git checkout template/main .github
 
 TABLE_NAME=test_table DATABASE_DSN="postgres://ya_metrics:ya_metrics@localhost:5432/ya_metrics?sslmode=disable"; go test
 -v ./...
+
+-5070.03

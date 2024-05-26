@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"net/http"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
@@ -63,7 +65,7 @@ func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, re
 
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
-		if err := enc.Encode(respStruct); err != nil {
+		if err = enc.Encode(respStruct); err != nil {
 			internal.Logger.Infow("error in encode")
 			http.Error(res, "internal server error", http.StatusInternalServerError)
 			return
