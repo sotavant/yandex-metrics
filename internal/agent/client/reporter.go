@@ -1,3 +1,4 @@
+// Package client Данный пакет служит для отправки собранных метрик на сервер.
 package client
 
 import (
@@ -15,11 +16,12 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/utils"
 )
 
+// настройки
 const (
-	updateURL       = `/update/`
-	batchUpdateURL  = `/updates/`
-	counterType     = `counter`
-	gaugeType       = `gauge`
+	updateURL       = `/update/`  // адрес для отправки одного значения
+	batchUpdateURL  = `/updates/` // адрес для отправки пакета со всеми метриками
+	counterType     = `counter`   // название типа со счетчиком
+	gaugeType       = `gauge`     // название типа с метриками
 	poolCounterName = `PollCount`
 )
 
@@ -43,6 +45,8 @@ func (s *Semaphore) Release() {
 	<-s.semaCh
 }
 
+// ReportMetric отправляет метрики.
+// На вход принимает хранилище и количество воркеров (параллельных процессов)
 func ReportMetric(ms *storage.MetricsStorage, workerCount int) {
 	//sendGauge(ms)
 	//sendCounter(ms)

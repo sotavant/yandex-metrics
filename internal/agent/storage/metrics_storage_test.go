@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,4 +33,13 @@ func BenchmarkMetricsStorage_UpdateAdditionalValues(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		s.UpdateAdditionalValues()
 	}
+}
+
+func ExampleMetricsStorage_UpdateValues() {
+	s := NewStorage()
+	s.UpdateValues()
+
+	fmt.Println(s.PollCount)
+	// Output:
+	// 1
 }

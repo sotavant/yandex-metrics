@@ -33,3 +33,22 @@ func BenchmarkReportMetric(b *testing.B) {
 		ReportMetric(storage, config.AppConfig.RateLimit)
 	}
 }
+
+func ExampleReportMetric() {
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	ms := storage2.NewStorage()
+	ms.UpdateValues()
+	ms.UpdateAdditionalValues()
+
+	config.AppConfig = &config.Config{
+		Addr:      strings.TrimPrefix(server.URL, "http://"),
+		HashKey:   "",
+		RateLimit: 10,
+	}
+	internal.InitLogger()
+	ReportMetric(ms, config.AppConfig.RateLimit)
+}

@@ -1,3 +1,4 @@
+// Package config Данный пакет служит для установки параметров.
 package config
 
 import (
@@ -8,20 +9,27 @@ import (
 	"github.com/sotavant/yandex-metrics/internal"
 )
 
+// параметы по-умолчанию.
 const (
 	pollInterval   = 2
 	reportInterval = 10
 	rateLimit      = 10
 	serverAddress  = `localhost:8080`
-	addressVar     = `ADDRESS`
-	reportIntVar   = `REPORT_INTERVAL`
-	pollIntVar     = `POLL_INTERVAL`
-	HashKeyVar     = `KEY`
-	RateLimitVar   = `RATE_LIMIT`
 )
 
+// названия переменных окружения.
+const (
+	addressVar   = `ADDRESS`
+	reportIntVar = `REPORT_INTERVAL`
+	pollIntVar   = `POLL_INTERVAL`
+	HashKeyVar   = `KEY`
+	RateLimitVar = `RATE_LIMIT`
+)
+
+// AppConfig глобальная переменная, в которой хранятся конфигурации.
 var AppConfig *Config
 
+// Config структура для хранения настроек.
 type Config struct {
 	Addr           string
 	ReportInterval int
@@ -30,11 +38,13 @@ type Config struct {
 	RateLimit      int
 }
 
+// InitConfig инициализация значения конфигурации.
 func InitConfig() {
 	AppConfig = new(Config)
 	AppConfig.ParseFlags()
 }
 
+// ParseFlags считыванание значений либо из параметров запуска либо из переменных окружения
 func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Addr, "a", serverAddress, "server address")
 	flag.StringVar(&c.HashKey, "k", "", "hash key")
