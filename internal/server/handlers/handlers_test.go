@@ -365,6 +365,9 @@ func ExampleUpdateHandler() {
 	h := http.HandlerFunc(UpdateHandler(appInstance))
 	h(w, request)
 	result := w.Result()
+	defer func() {
+		_ = result.Body.Close()
+	}()
 	fmt.Println(result.StatusCode)
 	value, _ := appInstance.Storage.GetGaugeValue(ctx, "test")
 	fmt.Println(value)
