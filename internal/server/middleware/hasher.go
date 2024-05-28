@@ -1,4 +1,5 @@
-package midleware
+// Package middleware содержит middleware
+package middleware
 
 import (
 	"bytes"
@@ -10,6 +11,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/utils"
 )
 
+// Hasher содержит ключ шифрования
 type Hasher struct {
 	key string
 }
@@ -18,6 +20,10 @@ func NewHasher(key string) *Hasher {
 	return &Hasher{key: key}
 }
 
+// Handler Данный middleware служит проверки зашифрованного текста запроса.
+// Если ключа нет в Header (HashSHA256) запроса, то тело запроса считается не зашифрованным.
+// Иначе проверяется на корректность.
+// В ответ на запрос также возвращается зашифрованное сообщение, если был передан ключ.
 func (h *Hasher) Handler(next http.Handler) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) {
 		ow := w

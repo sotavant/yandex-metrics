@@ -6,6 +6,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal"
 )
 
+// Storage Интерфейс, описывающий методы для работы с хранилищем
 type Storage interface {
 	AddGaugeValue(ctx context.Context, key string, value float64) error
 	AddCounterValue(ctx context.Context, key string, value int64) error

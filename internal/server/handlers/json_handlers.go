@@ -1,3 +1,4 @@
+// Package handlers Обработчики запросв для отправки/получения данных в формате json (Content-type: application/json)
 package handlers
 
 import (
@@ -12,6 +13,27 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+// UpdateJSONHandler Данный обработчик обрабатывает урлы вида: /update/ (POST-запрос)
+//
+// Принимает данные одной метрики в виде json-строки и сохраняет их в базе данных.
+//
+// Пример:
+//
+//	{
+//	 "type": "counter",
+//	 "id": "RandomValue",
+//	 "value": -33
+//	}
+//
+// Коды ответа:
+//
+//	200 - успешный ответ
+//	400 - неверные параметры
+//	500 - ошибка сервера
+//
+// Ответ:
+//
+//	строка в формате json
 func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
@@ -84,6 +106,35 @@ func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, re
 	}
 }
 
+// UpdateBatchJSONHandler Данный обработчик обрабатывает урлы вида: /updates/ (POST-запрос)
+//
+// Принимает данные нескольких метрики в виде json-строки и сохраняет их в базе данных.
+//
+// Пример:
+// [
+//
+//	{
+//	 "type": "counter",
+//	 "id": "RandomValue",
+//	 "delta": -33
+//	},
+//	{
+//	 "type": "gauge",
+//	 "id": "SomeMetric",
+//	 "value": -33
+//	}
+//
+// ]
+//
+// Коды ответа:
+//
+//	200 - успешный ответ
+//	400 - неверные параметры
+//	500 - ошибка сервера
+//
+// Ответ:
+//
+//	строка в формате json, со значениями всех метрик
 func UpdateBatchJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m []internal.Metrics
@@ -132,6 +183,26 @@ func UpdateBatchJSONHandler(appInstance *server.App) func(res http.ResponseWrite
 	}
 }
 
+// GetValueJSONHandler Данный обработчик обрабатывает урлы вида: /value/ (POST-запрос)
+//
+// Принимает данные метрики в виде json-строки и возвращает значение.
+//
+// Пример входных данных:
+//
+//	{
+//	"type": "gauge",
+//	"id": "TotalAlloc"
+//	}
+//
+// Коды ответа:
+//
+//	200 - успешный ответ
+//	400 - неверные параметры
+//	500 - ошибка сервера
+//
+// Ответ:
+//
+//	строка в формате json, со значением метрики
 func GetValueJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics

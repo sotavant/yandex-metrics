@@ -1,3 +1,4 @@
+// Package handlers Данный пакет содержит обработчики для методов API
 package handlers
 
 import (
@@ -14,6 +15,19 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 )
 
+// UpdateHandler Данный обработчик обрабатывает урлы вида: /update/{type}/{name}/{value} (POST запрос).
+// Служит для сохранения данных
+// где:
+//
+//	type - тип метрики (gauge/counter)
+//	name - название метрики
+//	value - значение (float64 - для типа gauge, int64 - для типа counter)
+//
+// Коды ответа:
+//
+//	200 - успешный ответ
+//	400 - неверные параметры
+//	500 - ошибка сервера
 func UpdateHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		mType := chi.URLParam(req, "type")
@@ -61,6 +75,24 @@ func UpdateHandler(appInstance *server.App) func(res http.ResponseWriter, req *h
 	}
 }
 
+// GetValueHandler Данный обработчик обрабатывает урлы вида: /update/{type}/{name} (GET-запрос).
+// Позволяет получить из системы метрику определенного типа и имени.
+//
+// Где:
+//
+//	type - тип метрики (gauge/counter)
+//	name - название метрики
+//
+// Коды ответа:
+//
+//	200 - успешный ответ
+//	400 - неверные параметры
+//	404 - метрика не найдена
+//	500 - ошибка сервера
+//
+// Ответ:
+//
+//	строка
 func GetValueHandler(appInstance *server.App) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var strValue string
@@ -99,6 +131,24 @@ func GetValueHandler(appInstance *server.App) func(w http.ResponseWriter, req *h
 	}
 }
 
+// GetValuesHandler Данный обработчик обрабатывает урлы вида: / (GET-запрос)
+//
+// Где:
+//
+//	type - тип метрики (gauge/counter)
+//	name - название метрики
+//
+// Позволяет получить все метрики в табличном виде.
+//
+// Коды ответа:
+//
+//	200 - успешный ответ
+//	400 - неверные параметры
+//	500 - ошибка сервера
+//
+// Ответ:
+//
+//	строка в виде html разметки
 func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		gaugeValues, err := appInstance.Storage.GetGauge(req.Context())
@@ -119,6 +169,14 @@ func GetValuesHandler(appInstance *server.App) func(w http.ResponseWriter, req *
 	}
 }
 
+// PingDBHandler Данный обработчик обрабатывает урлы вида: /ping (GET-запрос).
+//
+// Служит для получения статуса коннекта к базе данных.
+//
+// Коды ответа:
+//
+//	200 - успешный ответ
+//	500 - нет соединения
 func PingDBHandler(dbConn *pgxpool.Pool) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if dbConn == nil {

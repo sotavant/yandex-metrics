@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -338,4 +339,130 @@ func Test_pingDBHandler(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, result.StatusCode)
 		})
 	}
+}
+
+func ExampleUpdateHandler() {
+	conf := config.Config{
+		Addr:          "",
+		StoreInterval: 0,
+	}
+	ctx := context.Background()
+
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: memory.NewMetricsRepository(),
+	}
+
+	request := httptest.NewRequest(http.MethodPost, "/", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add(`type`, internal.GaugeType)
+	rctx.URLParams.Add(`name`, "test")
+	rctx.URLParams.Add(`value`, "134134")
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+	h := http.HandlerFunc(UpdateHandler(appInstance))
+	h(w, request)
+	result := w.Result()
+	fmt.Println(result.StatusCode)
+	value, _ := appInstance.Storage.GetGaugeValue(ctx, "test")
+	fmt.Println(value)
+
+	// Output:
+	// 200
+	// 134134
+}
+
+func ExampleGetValueHandler() {
+	var metricValue float64 = 134134
+	metricName := "test"
+
+	conf := config.Config{
+		Addr:          "",
+		StoreInterval: 0,
+	}
+	ctx := context.Background()
+
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: memory.NewMetricsRepository(),
+	}
+
+	_ = appInstance.Storage.AddGaugeValue(ctx, metricName, metricValue)
+
+	request := httptest.NewRequest(http.MethodPost, "/", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add(`type`, internal.GaugeType)
+	rctx.URLParams.Add(`name`, metricName)
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+	h := http.HandlerFunc(GetValueHandler(appInstance))
+	h(w, request)
+	result := w.Result()
+	defer func() {
+		_ = result.Body.Close()
+	}()
+	response, _ := io.ReadAll(result.Body)
+	fmt.Println(result.StatusCode)
+	fmt.Println(string(response))
+
+	// Output:
+	// 200
+	// 134134
+}
+
+func ExampleGetValuesHandler() {
+	conf := config.Config{
+		Addr:          "",
+		StoreInterval: 0,
+	}
+	ctx := context.Background()
+
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: memory.NewMetricsRepository(),
+	}
+
+	_ = appInstance.Storage.AddGaugeValue(ctx, "test", 134134)
+	_ = appInstance.Storage.AddGaugeValue(ctx, "next", 1)
+
+	request := httptest.NewRequest(http.MethodPost, "/", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+	h := http.HandlerFunc(GetValuesHandler(appInstance))
+	h(w, request)
+	result := w.Result()
+	defer func() {
+		_ = result.Body.Close()
+	}()
+	response, _ := io.ReadAll(result.Body)
+	fmt.Println(result.StatusCode)
+	fmt.Println(string(response))
+
+	// Output:
+	// 200
+	// <p>next: 1</p><p>test: 134134</p>
+}
+
+func ExamplePingDBHandler() {
+	request := httptest.NewRequest(http.MethodPost, "/", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+	h := http.HandlerFunc(PingDBHandler(nil))
+	h(w, request)
+	result := w.Result()
+	defer result.Body.Close()
+	fmt.Println(result.StatusCode)
+
+	// Output:
+	// 500
 }

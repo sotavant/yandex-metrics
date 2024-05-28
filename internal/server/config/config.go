@@ -1,3 +1,5 @@
+// Package config Данный пакет предназначен для считывания и установки параметров
+// необходимых для работы приложения.
 package config
 
 import (
@@ -6,18 +8,24 @@ import (
 	"strconv"
 )
 
+// Параметры по-умолчанию
 const (
-	addressVar           = `ADDRESS`
-	storeIntervalVar     = `STORE_INTERVAL`
-	fileStoragePathVar   = `FILE_STORAGE_PATH`
-	restoreVar           = `RESTORE`
-	databaseDSNVar       = `DATABASE_DSN`
-	tableNameVar         = `TABLE_NAME`
-	HashKeyVar           = `KEY`
 	DefaultServerAddress = "localhost:8080"
 	DefaultTableName     = "metric"
 )
 
+// Названия переменных окружения
+const (
+	addressVar         = `ADDRESS`
+	storeIntervalVar   = `STORE_INTERVAL`
+	fileStoragePathVar = `FILE_STORAGE_PATH`
+	restoreVar         = `RESTORE`
+	databaseDSNVar     = `DATABASE_DSN`
+	tableNameVar       = `TABLE_NAME`
+	HashKeyVar         = `KEY`
+)
+
+// Config Структура для хранения параметров
 type Config struct {
 	Addr            string
 	StoreInterval   uint
@@ -28,12 +36,16 @@ type Config struct {
 	HashKey         string
 }
 
+// InitConfig инициализация конфигурации
 func InitConfig() *Config {
 	conf := new(Config)
 	conf.ParseFlags()
 	return conf
 }
 
+// ParseFlags Метод для считывания параметров.
+// Сначала считываются значения из командной строки, если они не заданы, то берутся значения по-умолчанию
+// Если заданы переменные окружения, то они переопределяют значения заданные ранее
 func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Addr, "a", DefaultServerAddress, "server address")
 	flag.BoolVar(&c.Restore, "r", true, "need restore values")

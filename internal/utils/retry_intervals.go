@@ -6,6 +6,7 @@ const (
 	WaitTimeDiff  = 2
 )
 
+// GetRetryWaitTimes получение массива с интервалами повторных запросов
 func GetRetryWaitTimes() map[int]int {
 	interval := make(map[int]int, RetriesCount)
 	for i := 1; i <= 3; i++ {
