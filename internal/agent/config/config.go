@@ -32,9 +32,9 @@ var AppConfig *Config
 // Config структура для хранения настроек.
 type Config struct {
 	Addr           string
+	HashKey        string
 	ReportInterval int
 	PollInterval   int
-	HashKey        string
 	RateLimit      int
 }
 

@@ -28,12 +28,12 @@ const (
 // Config Структура для хранения параметров
 type Config struct {
 	Addr            string
-	StoreInterval   uint
+	HashKey         string
 	FileStoragePath string
-	Restore         bool
 	DatabaseDSN     string
 	TableName       string
-	HashKey         string
+	StoreInterval   uint
+	Restore         bool
 }
 
 // InitConfig инициализация конфигурации
