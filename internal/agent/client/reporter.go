@@ -133,7 +133,8 @@ func worker(jobs <-chan []byte) {
 
 func sendRequest(jsonData []byte, url string) {
 	intervals := utils.GetRetryWaitTimes()
-	retries := len(intervals) + 1
+	retries := len(intervals)
+	retries++
 	counter := 1
 	data := getCompressedData(jsonData)
 

@@ -44,8 +44,8 @@ func Test_updateJsonHandler(t *testing.T) {
 	handler := UpdateJSONHandler(appInstance)
 
 	type want struct {
-		status int
 		body   string
+		status int
 	}
 
 	tests := []struct {
@@ -57,8 +57,8 @@ func Test_updateJsonHandler(t *testing.T) {
 			name: `newGaugeValue`,
 			body: `{"id": "ss","type":"gauge","value":-33.345345}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `{"value":-33.345345,"id":"ss","type":"gauge"}
 `},
 		},
@@ -66,8 +66,8 @@ func Test_updateJsonHandler(t *testing.T) {
 			name: `newCounterValue`,
 			body: `{"id": "ss","type":"counter","delta":3}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `{"delta":3,"id":"ss","type":"counter"}
 `},
 		},
@@ -75,8 +75,8 @@ func Test_updateJsonHandler(t *testing.T) {
 			name: `repeatCounterValue`,
 			body: `{"id": "ss","type":"counter","delta":3}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `{"delta":6,"id":"ss","type":"counter"}
 `},
 		},
@@ -84,24 +84,24 @@ func Test_updateJsonHandler(t *testing.T) {
 			name: `badJson`,
 			body: `{id": "ss","type":"counter","delta":3}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: http.StatusBadRequest, body: `internal server error`},
 		},
 		{
 			name: `badType`,
 			body: `{"id": "ss","type":"counterBad","delta":3}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: http.StatusBadRequest, body: `internal server error`},
 		},
 		{
 			name: `emptyValue`,
 			body: `{"id": "ss","type":"counter","value":3}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: http.StatusBadRequest, body: `internal server error`},
 		},
 	}
@@ -143,8 +143,8 @@ func Test_getValueJsonHandler(t *testing.T) {
 	handler := GetValueJSONHandler(appInstance)
 
 	type want struct {
-		status int
 		body   string
+		status int
 	}
 
 	tests := []struct {
@@ -156,8 +156,8 @@ func Test_getValueJsonHandler(t *testing.T) {
 			name: `getGaugeValue`,
 			body: `{"id": "ss","type":"gauge","value":-33.345345}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `{"value":-3444,"id":"ss","type":"gauge"}
 `},
 		},
@@ -165,8 +165,8 @@ func Test_getValueJsonHandler(t *testing.T) {
 			name: `getCounterValue`,
 			body: `{"delta":6,"id": "ss","type":"counter"}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `{"delta":3,"id":"ss","type":"counter"}
 `},
 		},
@@ -174,24 +174,24 @@ func Test_getValueJsonHandler(t *testing.T) {
 			name: `badJson`,
 			body: `{id": "ss","type":"counter","delta":3}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: http.StatusBadRequest, body: `internal server error`},
 		},
 		{
 			name: `badType`,
 			body: `{"delta":3,"id": "ss","type":"counterBad"}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: http.StatusBadRequest, body: `internal server error`},
 		},
 		{
 			name: `emptyValue`,
 			body: `{"value":3,"id": "ssww","type":"counter"}`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: http.StatusNotFound, body: `internal server error`},
 		},
 	}
@@ -261,7 +261,7 @@ func TestGzipCompression(t *testing.T) {
 		//handler(w, r)
 		result := w.Result()
 		defer func() {
-			err := result.Body.Close()
+			err = result.Body.Close()
 			assert.NoError(t, err)
 		}()
 
@@ -341,8 +341,8 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 	}
 
 	type want struct {
-		status int
 		body   string
+		status int
 	}
 
 	tests := []struct {
@@ -355,8 +355,8 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			name: `newGaugeValue`,
 			body: `[{"id": "ss","type":"gauge","value":-33.345345}]`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `[{"id":"ss","type":"gauge","value":-33.345345}]`},
 			inMemory: true,
 		},
@@ -364,8 +364,8 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			name: `newCounterValue`,
 			body: `[{"id": "ss","type":"counter","delta":3}]`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `[{"id":"ss","type":"counter","delta":3}, {"id":"ss","type":"gauge","value":-33.345345}]`},
 			inMemory: true,
 		},
@@ -373,8 +373,8 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			name: `repeatCounterValue`,
 			body: `[{"id": "ss","type":"counter","delta":3}]`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `[{"id":"ss","type":"counter","delta":6}, {"id":"ss","type":"gauge","value":-33.345345}]`},
 			inMemory: true,
 		},
@@ -382,8 +382,8 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			name: `newGaugeValueBD`,
 			body: `[{"id": "ss","type":"gauge","value":-33.345345}]`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `[{"id":"ss","type":"gauge","value":-33.345345}]`},
 			inMemory: false,
 		},
@@ -391,8 +391,8 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			name: `newGaugeValuesBD`,
 			body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345}]`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345}]`},
 			inMemory: false,
 		},
@@ -400,8 +400,8 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			name: `addVariousValuesBD`,
 			body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345}, {"id": "ss","type":"counter","delta":3}]`,
 			want: struct {
-				status int
 				body   string
+				status int
 			}{status: 200, body: `[{"id": "ss","type":"gauge","value":-33.345345},{"id": "pp","type":"gauge","value":-33.345345},{"id": "ss","type":"counter","delta":3}]`},
 			inMemory: false,
 		},

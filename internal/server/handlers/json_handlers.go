@@ -165,7 +165,7 @@ func UpdateBatchJSONHandler(appInstance *server.App) func(res http.ResponseWrite
 
 		res.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(res)
-		if err := enc.Encode(metrics); err != nil {
+		if err = enc.Encode(metrics); err != nil {
 			internal.Logger.Infow("error in encode")
 			http.Error(res, "internal server error", http.StatusInternalServerError)
 			return
@@ -253,17 +253,19 @@ func GetValueJSONHandler(appInstance *server.App) func(res http.ResponseWriter, 
 
 func getMetricsStruct(ctx context.Context, storage repository.Storage, before internal.Metrics) (internal.Metrics, error) {
 	var err error
+	var gValue float64
+	var cValue int64
 	m := before
 
 	switch m.MType {
 	case internal.GaugeType:
-		gValue, err := storage.GetGaugeValue(ctx, m.ID)
+		gValue, err = storage.GetGaugeValue(ctx, m.ID)
 		if err != nil {
 			return m, err
 		}
 		m.Value = &gValue
 	case internal.CounterType:
-		cValue, err := storage.GetCounterValue(ctx, m.ID)
+		cValue, err = storage.GetCounterValue(ctx, m.ID)
 		if err != nil {
 			return m, err
 		}

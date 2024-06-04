@@ -101,7 +101,7 @@ func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 			Value: &v,
 		}
 
-		if err := fs.encoder.Encode(&m); err != nil {
+		if err = fs.encoder.Encode(&m); err != nil {
 			return err
 		}
 	}

@@ -80,9 +80,9 @@ func (h *Hasher) checkHash(reqHash string, r *http.Request) (bool, error) {
 }
 
 type hasherResponseWriter struct {
+	hashKey string
 	http.ResponseWriter
 	data        []byte
-	hashKey     string
 	wroteHeader bool
 }
 

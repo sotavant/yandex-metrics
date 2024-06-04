@@ -210,10 +210,10 @@ func TestMetricsRepository_KeyExist(t *testing.T) {
 	}
 
 	tests := []struct {
+		wantErr assert.ErrorAssertionFunc
 		name    string
 		args    args
 		want    wantArgs
-		wantErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "insert value",
@@ -273,10 +273,10 @@ func TestMetricsRepository_GetGauge(t *testing.T) {
 	}(ctx, conn, tableName)
 
 	tests := []struct {
-		name    string
 		fields  map[string]float64
 		want    map[string]float64
 		wantErr assert.ErrorAssertionFunc
+		name    string
 	}{
 		{
 			name: "add values",
@@ -320,15 +320,15 @@ func TestMetricsRepository_GetGaugeValue(t *testing.T) {
 		return
 	}
 	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
-		err := test.DropTable(ctx, conn, tableName)
+		err = test.DropTable(ctx, conn, tableName)
 		assert.NoError(t, err)
 	}(ctx, conn, tableName)
 
 	tests := []struct {
-		name    string
 		fields  map[string]float64
 		want    map[string]float64
 		wantErr assert.ErrorAssertionFunc
+		name    string
 	}{
 		{
 			name: "add values",
@@ -349,10 +349,11 @@ func TestMetricsRepository_GetGaugeValue(t *testing.T) {
 			}
 
 			for k, v := range tt.fields {
-				err := m.AddGaugeValue(ctx, k, v)
+				var got float64
+				err = m.AddGaugeValue(ctx, k, v)
 				assert.NoError(t, err)
 
-				got, err := m.GetGaugeValue(ctx, k)
+				got, err = m.GetGaugeValue(ctx, k)
 				if !tt.wantErr(t, err, fmt.Sprintf("GetGauge(%v)", ctx)) {
 					return
 				}
@@ -379,10 +380,10 @@ func TestMetricsRepository_GetCounters(t *testing.T) {
 	}(ctx, conn, tableName)
 
 	tests := []struct {
-		name    string
 		fields  map[string]int64
 		want    map[string]int64
 		wantErr assert.ErrorAssertionFunc
+		name    string
 	}{
 		{
 			name: "add values",
@@ -449,9 +450,9 @@ func TestMetricsRepository_GetCounterValue(t *testing.T) {
 
 	tests := []struct {
 		name    string
+		wantErr assert.ErrorAssertionFunc
 		fields  fields
 		want    fields
-		wantErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "add values",
@@ -506,7 +507,7 @@ func BenchmarkMetricsRepository_AddValues(b *testing.B) {
 		return
 	}
 	defer func(ctx context.Context, conn *pgxpool.Pool, tableName string) {
-		err := test.DropTable(ctx, conn, tableName)
+		err = test.DropTable(ctx, conn, tableName)
 		assert.NoError(b, err)
 	}(ctx, conn, tableName)
 	m := fillMetrics()

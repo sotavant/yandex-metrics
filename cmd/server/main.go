@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	const chanCount = 2
 	ctx := context.Background()
 	internal.InitLogger()
 
@@ -28,7 +29,7 @@ func main() {
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(chanCount)
 
 	go func() {
 		err = http.ListenAndServe(appInstance.Config.Addr, r)
