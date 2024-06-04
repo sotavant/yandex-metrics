@@ -44,6 +44,15 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 			switch n := node.(type) {
 			case *ast.CallExpr:
+				if _, ok := n.Fun.(*ast.SelectorExpr); !ok {
+					return true
+				}
+
+				X := n.Fun.(*ast.SelectorExpr).X
+				if _, ok := X.(*ast.Ident); !ok {
+					return true
+				}
+
 				x := n.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name
 				sel := n.Fun.(*ast.SelectorExpr).Sel.Name
 				expr := x + "." + sel

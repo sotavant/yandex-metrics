@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/kisielk/errcheck/errcheck"
+	"github.com/sotavant/yandex-metrics/internal/linter"
 	magic_numbers "github.com/tommy-muehle/go-mnd"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
@@ -60,6 +61,7 @@ func main() {
 	checks := getAnalysisAnalyzers()
 	checks = append(checks, getStaticcheckAnalyzers()...)
 	checks = append(checks, getAdditionalAnalyzers()...)
+	checks = append(checks, linter.OsExitAnalyzer)
 	multichecker.Main(
 		checks...,
 	)
