@@ -59,7 +59,7 @@ func Test_updateJsonHandler(t *testing.T) {
 			want: struct {
 				status int
 				body   string
-			}{status: 200, body: `{"id":"ss","type":"gauge","value":-33.345345}
+			}{status: 200, body: `{"value":-33.345345,"id":"ss","type":"gauge"}
 `},
 		},
 		{
@@ -68,7 +68,7 @@ func Test_updateJsonHandler(t *testing.T) {
 			want: struct {
 				status int
 				body   string
-			}{status: 200, body: `{"id":"ss","type":"counter","delta":3}
+			}{status: 200, body: `{"delta":3,"id":"ss","type":"counter"}
 `},
 		},
 		{
@@ -77,7 +77,7 @@ func Test_updateJsonHandler(t *testing.T) {
 			want: struct {
 				status int
 				body   string
-			}{status: 200, body: `{"id":"ss","type":"counter","delta":6}
+			}{status: 200, body: `{"delta":6,"id":"ss","type":"counter"}
 `},
 		},
 		{
@@ -158,16 +158,16 @@ func Test_getValueJsonHandler(t *testing.T) {
 			want: struct {
 				status int
 				body   string
-			}{status: 200, body: `{"id":"ss","type":"gauge","value":-3444}
+			}{status: 200, body: `{"value":-3444,"id":"ss","type":"gauge"}
 `},
 		},
 		{
 			name: `getCounterValue`,
-			body: `{"id": "ss","type":"counter","delta":6}`,
+			body: `{"delta":6,"id": "ss","type":"counter"}`,
 			want: struct {
 				status int
 				body   string
-			}{status: 200, body: `{"id":"ss","type":"counter","delta":3}
+			}{status: 200, body: `{"delta":3,"id":"ss","type":"counter"}
 `},
 		},
 		{
@@ -180,7 +180,7 @@ func Test_getValueJsonHandler(t *testing.T) {
 		},
 		{
 			name: `badType`,
-			body: `{"id": "ss","type":"counterBad","delta":3}`,
+			body: `{"delta":3,"id": "ss","type":"counterBad"}`,
 			want: struct {
 				status int
 				body   string
@@ -188,7 +188,7 @@ func Test_getValueJsonHandler(t *testing.T) {
 		},
 		{
 			name: `emptyValue`,
-			body: `{"id": "ssww","type":"counter","value":3}`,
+			body: `{"value":3,"id": "ssww","type":"counter"}`,
 			want: struct {
 				status int
 				body   string
@@ -229,7 +229,7 @@ func TestGzipCompression(t *testing.T) {
 	assert.NoError(t, err)
 	err = appInstance.Storage.AddCounterValue(context.Background(), "ss", 3)
 	assert.NoError(t, err)
-	requestBody := `{"id":"ss","type":"counter","delta":3}
+	requestBody := `{"delta":3,"id":"ss","type":"counter"}
 `
 	htmlResponse := `<p>ss: -3444</p>`
 
@@ -474,7 +474,7 @@ func ExampleUpdateJSONHandler() {
 
 	// Output:
 	// 200
-	// {"id":"ss","type":"gauge","value":-33.345345}
+	// {"value":-33.345345,"id":"ss","type":"gauge"}
 }
 
 func ExampleUpdateBatchJSONHandler() {
@@ -507,7 +507,7 @@ func ExampleUpdateBatchJSONHandler() {
 
 	// Output:
 	// 200
-	// [{"id":"a","type":"gauge","value":1},{"id":"b","type":"counter","delta":2}]
+	// [{"value":1,"id":"a","type":"gauge"},{"delta":2,"id":"b","type":"counter"}]
 }
 
 func ExampleGetValueJSONHandler() {
@@ -543,5 +543,5 @@ func ExampleGetValueJSONHandler() {
 
 	// Output:
 	// 200
-	// {"id":"c","type":"counter","delta":1}
+	// {"delta":1,"id":"c","type":"counter"}
 }

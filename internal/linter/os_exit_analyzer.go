@@ -1,10 +1,7 @@
 package linter
 
 import (
-	"fmt"
 	"go/ast"
-	"go/parser"
-	"go/token"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -17,6 +14,8 @@ var OsExitAnalyzer = &analysis.Analyzer{
 
 const checkedPkgName = "main"
 const checkedFncName = "main"
+const checkedCallExpr = "os.Exit"
+const checkCallArg = "0"
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	//var lastFunc *ast.FuncDecl
@@ -43,7 +42,19 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				return true
 			}
 
-			fmt.Println(node.)
+			switch n := node.(type) {
+			case *ast.CallExpr:
+				x := n.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name
+				sel := n.Fun.(*ast.SelectorExpr).Sel.Name
+				expr := x + "." + sel
+				if expr != checkedCallExpr {
+					return true
+				}
+
+				if n.Args[0].(*ast.BasicLit).Value == checkCallArg {
+					pass.Reportf(n.Fun.Pos(), "bad expression for use")
+				}
+			}
 
 			return true
 		})

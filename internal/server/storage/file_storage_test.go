@@ -141,7 +141,7 @@ func TestFileStorage_Sync(t *testing.T) {
 				"c": 13,
 			},
 		}
-		want := []string{`{"id":"s","type":"gauge","value":111}`, `{"id":"c","type":"counter","delta":13}`}
+		want := []string{`{"value":111,"id":"s","type":"gauge"}`, `{"delta":13,"id":"c","type":"counter"}`}
 
 		defer func(file *os.File) {
 			err := file.Close()

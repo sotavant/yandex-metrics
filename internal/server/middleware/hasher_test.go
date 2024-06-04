@@ -92,7 +92,7 @@ func TestRequestHasherMiddleware(t *testing.T) {
 
 func TestResponseHasherMiddleware(t *testing.T) {
 	key := "hashKey"
-	requestBody := `{"id":"ss","type":"gauge","value":3}`
+	requestBody := `{"value":3,"id":"ss","type":"gauge"}`
 	ctx := context.Background()
 	hash, err := utils.GetHash([]byte(requestBody), key)
 	assert.NoError(t, err)

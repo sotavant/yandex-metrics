@@ -47,7 +47,7 @@ func InitConfig() {
 // ParseFlags считыванание значений либо из параметров запуска либо из переменных окружения
 func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Addr, "a", serverAddress, "server address")
-	flag.StringVar(&c.HashKey, "k", "", "hash key")
+	flag.StringVar(&c.HashKey, "k", "someKey", "hash key")
 	flag.IntVar(&c.PollInterval, "p", pollInterval, "pollInterval")
 	flag.IntVar(&c.ReportInterval, "r", reportInterval, "reportInterval")
 	flag.IntVar(&c.RateLimit, "l", rateLimit, "rate limit")
