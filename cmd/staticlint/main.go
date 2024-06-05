@@ -1,3 +1,19 @@
+// Multichecker.
+//
+// Пример запуска:
+// go vet -vettool=cmd/staticlint/staticLint ./...
+//
+// Включает в себя следующие анализаторы:
+//
+// - стандартные статические анализаторы пакета golang.org/x/tools/go/analysis/passes;
+//
+// - всех анализаторов класса SA пакета staticcheck.io;
+//
+// - поиск "magic numbers" github.com/tommy-muehle/go-mnd
+//
+// - проверка обработки всех ошибок: github.com/kisielk/errcheck/errcheck
+//
+// - поиска вызова os.Exit в функциях main пакета main
 package main
 
 import (

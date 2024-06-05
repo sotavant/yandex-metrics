@@ -1,3 +1,11 @@
+// Package linter Анализатор позволяющий выявлять прямые вызовы os.Exit(0) в функции main, пакета main.
+//
+// Использование:
+// multichecker.Main(
+//
+//	linter.OsExitAnalyzer
+//
+// )
 package linter
 
 import (
@@ -6,6 +14,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// OsExitAnalyzer Описание анализатора
 var OsExitAnalyzer = &analysis.Analyzer{
 	Name: "osexit_analyzer",
 	Doc:  "check for os.exit in main function of main package",
@@ -60,9 +69,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 					return true
 				}
 
-				if n.Args[0].(*ast.BasicLit).Value == checkCallArg {
-					pass.Reportf(n.Fun.Pos(), "bad expression for use")
-				}
+				pass.Reportf(n.Fun.Pos(), "bad expression for use")
 			}
 
 			return true
