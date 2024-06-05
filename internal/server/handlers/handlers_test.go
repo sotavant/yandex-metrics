@@ -463,12 +463,9 @@ func ExamplePingDBHandler() {
 	h := http.HandlerFunc(PingDBHandler(nil))
 	h(w, request)
 	result := w.Result()
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(result.Body)
+	defer func() {
+		_ = result.Body.Close()
+	}()
 	fmt.Println(result.StatusCode)
 
 	// Output:
