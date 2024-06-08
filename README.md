@@ -37,3 +37,6 @@ TABLE_NAME=test_table DATABASE_DSN="postgres://ya_metrics:ya_metrics@localhost:5
 -v ./...
 
 -17849.57kB
+
+## Запуск с флагами
+go build -ldflags "-X main.buildVersion=0.1 -X 'main.buildDate=$(date +'%Y/%m/%d')' -X 'main.buildCommit=$(git rev-parse --short HEAD)'"

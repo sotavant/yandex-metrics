@@ -11,7 +11,12 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 func main() {
+	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 	internal.InitLogger()
 	config.InitConfig()
 

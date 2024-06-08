@@ -13,7 +13,12 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/middleware"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 func main() {
+	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 	const chanCount = 2
 	ctx := context.Background()
 	internal.InitLogger()
@@ -54,6 +59,7 @@ func main() {
 }
 
 func initRouters(app *server.App) *chi.Mux {
+
 	r := chi.NewRouter()
 
 	hasher := middleware.NewHasher(app.Config.HashKey)
