@@ -24,12 +24,9 @@ var OsExitAnalyzer = &analysis.Analyzer{
 const checkedPkgName = "main"
 const checkedFncName = "main"
 const checkedCallExpr = "os.Exit"
-const checkCallArg = "0"
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	//var lastFunc *ast.FuncDecl
 	var isMainFunc = false
-	//var startLine, endLine int
 
 	for _, file := range pass.Files {
 		isMainFunc = false

@@ -11,9 +11,15 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 )
 
-var buildVersion string
-var buildDate string
-var buildCommit string
+// Build info.
+// Need define throw ldflags:
+//
+//	go build -ldflags "-X main.buildVersion=0.1 -X 'main.buildDate=$(date +'%Y/%m/%d')' -X 'main.buildCommit=$(git rev-parse --short HEAD)'"
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
 
 func main() {
 	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)

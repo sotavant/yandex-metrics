@@ -27,6 +27,7 @@ func InitLogger() {
 	Logger = *logger.Sugar()
 }
 
+// PrintBuildInfo output to stdout build info
 func PrintBuildInfo(version, date, commit string) {
 	if version == "" {
 		version = buildDefaultValue
