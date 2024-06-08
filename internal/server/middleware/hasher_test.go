@@ -1,7 +1,12 @@
-package midleware
+package middleware
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
@@ -11,10 +16,6 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/sotavant/yandex-metrics/internal/utils"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 )
 
 func TestRequestHasherMiddleware(t *testing.T) {
@@ -69,7 +70,7 @@ func TestRequestHasherMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			reqFunc := func() *http.Request {
-				req := httptest.NewRequest("POST", "/update/", strings.NewReader(requestBody))
+				req := httptest.NewRequest(http.MethodPost, "/update/", strings.NewReader(requestBody))
 				req.Header.Set(utils.HasherHeaderKey, hash)
 				req.Header.Set("Accept", "application/json")
 				req.Header.Set("Content-Type", "application/json")
@@ -139,7 +140,7 @@ func TestResponseHasherMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			reqFunc := func() *http.Request {
-				req := httptest.NewRequest("POST", "/value/", strings.NewReader(requestBody))
+				req := httptest.NewRequest(http.MethodPost, "/value/", strings.NewReader(requestBody))
 				req.Header.Set(utils.HasherHeaderKey, hash)
 				req.Header.Set("Accept", "application/json")
 				req.Header.Set("Content-Type", "application/json")

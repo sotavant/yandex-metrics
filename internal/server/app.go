@@ -1,7 +1,9 @@
+// Package server Пакет для получения и хранения метрик
 package server
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
@@ -10,6 +12,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 )
 
+// App структура для хранения текущего состояния, конфигурация, соединения с базой данных
 type App struct {
 	Config  *config.Config
 	Storage repository.Storage
@@ -17,6 +20,7 @@ type App struct {
 	DBConn  *pgxpool.Pool
 }
 
+// InitApp Инициализация приложения
 func InitApp(ctx context.Context) (*App, error) {
 	var err error
 
@@ -52,6 +56,7 @@ func InitApp(ctx context.Context) (*App, error) {
 	return appInstance, nil
 }
 
+// SyncFs Метод для синхронизация значения в памяти и в файле. В том случае, если используется in-memory хранилище
 func (app *App) SyncFs(ctx context.Context) {
 	needSync := false
 

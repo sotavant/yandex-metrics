@@ -4,23 +4,24 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
-	"github.com/sotavant/yandex-metrics/internal/server/midleware"
+	"github.com/sotavant/yandex-metrics/internal/server/middleware"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres/test"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 )
 
 func Test_updateJsonHandler(t *testing.T) {
@@ -241,13 +242,13 @@ func TestGzipCompression(t *testing.T) {
 		assert.NoError(t, err)
 
 		r := chi.NewRouter()
-		r.Use(midleware.GzipMiddleware)
+		r.Use(middleware.GzipMiddleware)
 		r.Post("/value", GetValueJSONHandler(appInstance))
 
 		w := httptest.NewRecorder()
 
 		reqFunc := func() *http.Request {
-			req := httptest.NewRequest("POST", "/value", buf)
+			req := httptest.NewRequest(http.MethodPost, "/value", buf)
 			req.Header.Set("Content-Encoding", "gzip")
 			req.Header.Set("Accept-Encoding", "0")
 			req.Header.Set("Accept", "application/json")
@@ -277,7 +278,7 @@ func TestGzipCompression(t *testing.T) {
 		buf := bytes.NewBufferString(requestBody)
 		w := httptest.NewRecorder()
 		reqFunc := func() *http.Request {
-			req := httptest.NewRequest("POST", "/", buf)
+			req := httptest.NewRequest(http.MethodPost, "/", buf)
 			req.Header.Set("Accept-Encoding", "gzip")
 			req.Header.Set("Accept", "html/text")
 
@@ -285,8 +286,7 @@ func TestGzipCompression(t *testing.T) {
 		}
 
 		r := chi.NewRouter()
-		r.Use(midleware.GzipMiddleware)
-		//r := httptest.NewRequest(http.MethodPost, "/value", buf)
+		r.Use(middleware.GzipMiddleware)
 		r.Post("/", GetValuesHandler(appInstance))
 
 		r.ServeHTTP(w, reqFunc())
@@ -442,4 +442,106 @@ func Test_updateBatchJSONHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ExampleUpdateJSONHandler() {
+	conf := config.Config{
+		Addr:          "",
+		StoreInterval: 0,
+	}
+	st := memory.NewMetricsRepository()
+
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: st,
+	}
+
+	handler := UpdateJSONHandler(appInstance)
+
+	request := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"id":"ss","type":"gauge","value":-33.345345}`))
+	w := httptest.NewRecorder()
+
+	handler(w, request)
+	result := w.Result()
+	defer func() {
+		_ = result.Body.Close()
+	}()
+
+	body, _ := io.ReadAll(result.Body)
+
+	fmt.Println(result.StatusCode)
+	fmt.Println(string(body))
+
+	// Output:
+	// 200
+	// {"id":"ss","type":"gauge","value":-33.345345}
+}
+
+func ExampleUpdateBatchJSONHandler() {
+	conf := config.Config{
+		Addr:          "",
+		StoreInterval: 0,
+	}
+	st := memory.NewMetricsRepository()
+
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: st,
+	}
+
+	handler := UpdateBatchJSONHandler(appInstance)
+
+	request := httptest.NewRequest(http.MethodPost, "/updates/", strings.NewReader(`[{"id":"a","type":"gauge","value":1},{"id":"b","type":"counter","delta":2}]`))
+	w := httptest.NewRecorder()
+
+	handler(w, request)
+	result := w.Result()
+	defer func() {
+		_ = result.Body.Close()
+	}()
+
+	body, _ := io.ReadAll(result.Body)
+
+	fmt.Println(result.StatusCode)
+	fmt.Println(string(body))
+
+	// Output:
+	// 200
+	// [{"id":"a","type":"gauge","value":1},{"id":"b","type":"counter","delta":2}]
+}
+
+func ExampleGetValueJSONHandler() {
+	conf := config.Config{
+		Addr:          "",
+		StoreInterval: 0,
+	}
+	st := memory.NewMetricsRepository()
+	ctx := context.Background()
+
+	appInstance := &server.App{
+		Config:  &conf,
+		Storage: st,
+	}
+
+	_ = appInstance.Storage.AddCounterValue(ctx, "c", 1)
+
+	handler := GetValueJSONHandler(appInstance)
+
+	request := httptest.NewRequest(http.MethodPost, "/value/", strings.NewReader(`{"id":"c","type":"counter"}`))
+	w := httptest.NewRecorder()
+
+	handler(w, request)
+	result := w.Result()
+	defer func() {
+		_ = result.Body.Close()
+	}()
+
+	body, _ := io.ReadAll(result.Body)
+
+	fmt.Println(result.StatusCode)
+	fmt.Println(string(body))
+
+	// Output:
+	// 200
+	// {"id":"c","type":"counter","delta":1}
 }

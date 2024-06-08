@@ -1,14 +1,17 @@
+// Package storage данный пакет служит для получения и хранения метрик
 package storage
 
 import (
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
 	"math/rand"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
+// Названия метрик
 const (
 	allocMetric         = "Alloc"
 	buckHashSysMetric   = "BuckHashSys"
@@ -42,12 +45,14 @@ const (
 	CPUUtilization1     = "CPUUtilization1"
 )
 
+// MetricsStorage структура, в которой хранятся метрики
 type MetricsStorage struct {
 	Metrics   map[string]float64
 	PollCount int64
 	RWMutex   sync.RWMutex
 }
 
+// NewStorage инициализация хранилища
 func NewStorage() *MetricsStorage {
 	var m MetricsStorage
 	m.Metrics = make(map[string]float64)
@@ -55,6 +60,7 @@ func NewStorage() *MetricsStorage {
 	return &m
 }
 
+// UpdateValues считывание и сохранение метрик
 func (m *MetricsStorage) UpdateValues() {
 	m.RWMutex.Lock()
 	defer m.RWMutex.Unlock()
@@ -95,6 +101,7 @@ func (m *MetricsStorage) UpdateValues() {
 	m.PollCount += 1
 }
 
+// UpdateAdditionalValues считывание и запись дополнительных метрик
 func (m *MetricsStorage) UpdateAdditionalValues() {
 	m.RWMutex.Lock()
 	defer m.RWMutex.Unlock()

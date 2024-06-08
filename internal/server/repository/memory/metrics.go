@@ -3,8 +3,9 @@ package memory
 import (
 	"context"
 	"fmt"
-	"github.com/sotavant/yandex-metrics/internal"
 	"sync"
+
+	"github.com/sotavant/yandex-metrics/internal"
 )
 
 type MetricsRepository struct {

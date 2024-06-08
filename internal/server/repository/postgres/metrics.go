@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
-	"strings"
 )
 
 type MetricsRepository struct {
@@ -59,6 +60,7 @@ func (m *MetricsRepository) AddGaugeValue(ctx context.Context, key string, value
 	query := m.setTableName(`insert into #T# (id, type, value)
 		values ($1, $2, $3)
 		on conflict on constraint #T#_pk do update set id = $1, type = $2, value = $3;`)
+	query = m.setTableName(query)
 
 	connAlive := storage.CheckConnection(ctx, m.conn)
 	if !connAlive {
@@ -129,10 +131,12 @@ func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Me
 	}
 
 	defer func(tx pgx.Tx, ctx context.Context) {
-		err = tx.Rollback(ctx)
 		if err != nil {
-			internal.Logger.Infow("error in rollback transaction", err, err)
-			panic(err)
+			err = tx.Rollback(ctx)
+			if err != nil {
+				internal.Logger.Infow("error in rollback transaction", err, err)
+				panic(err)
+			}
 		}
 	}(tx, ctx)
 
@@ -151,7 +155,9 @@ func (m *MetricsRepository) AddValues(ctx context.Context, metrics []internal.Me
 		}
 	}
 
-	return tx.Commit(ctx)
+	err = tx.Commit(ctx)
+
+	return err
 }
 
 func (m *MetricsRepository) GetValue(ctx context.Context, mType, key string) (interface{}, error) {
@@ -339,5 +345,5 @@ func (m *MetricsRepository) GetCounterValue(ctx context.Context, key string) (in
 }
 
 func (m *MetricsRepository) setTableName(query string) string {
-	return strings.ReplaceAll(query, "#T#", m.tableName)
+	return strings.Replace(query, "#T#", m.tableName, 1)
 }

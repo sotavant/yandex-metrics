@@ -1,11 +1,13 @@
-package midleware
+// Package middleware содержит middleware
+package middleware
 
 import (
-	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server"
 )
 
 const AcceptableEncoding = "gzip"
@@ -18,6 +20,14 @@ func getTypesForEncoding() [3]string {
 	}
 }
 
+// WithLogging Данный middleware служит для вывода в логи вспомогательной информации.
+//
+//	Данные:
+//	uri
+//	method
+//	duration
+//	status
+//	size
 func WithLogging(h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -53,6 +63,10 @@ func WithLogging(h http.Handler) http.Handler {
 	return http.HandlerFunc(logFn)
 }
 
+// GzipMiddleware В том случае если передан заголовк "Content-Encoding" то делается попытка разархивировать тело запроса.
+// Если передан Accept-Encoding, то ответ архивируется.
+//
+// Поддерживается формат: gzip
 func GzipMiddleware(h http.Handler) http.Handler {
 	gzipFn := func(w http.ResponseWriter, r *http.Request) {
 		ow := w

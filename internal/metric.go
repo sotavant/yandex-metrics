@@ -1,8 +1,12 @@
 package internal
 
-const GaugeType = "gauge"
-const CounterType = "counter"
+// Названия типа метрик, которыми оперирует приложение
+const (
+	GaugeType   = "gauge"
+	CounterType = "counter"
+)
 
+// Metrics структура для хранения метрик
 type Metrics struct {
 	ID    string   `json:"id"`
 	MType string   `json:"type"`

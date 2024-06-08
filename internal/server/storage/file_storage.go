@@ -1,16 +1,19 @@
+// Package storage Пакет для работы с хранилищами
 package storage
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/sotavant/yandex-metrics/internal"
-	"github.com/sotavant/yandex-metrics/internal/server/repository"
 	"io"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/sotavant/yandex-metrics/internal"
+	"github.com/sotavant/yandex-metrics/internal/server/repository"
 )
 
+// FileStorage структура для работы с файловым хранилищем
 type FileStorage struct {
 	File          *os.File
 	encoder       *json.Encoder
@@ -20,6 +23,13 @@ type FileStorage struct {
 	StoreInterval uint
 }
 
+// NewFileStorage инициализация файлового хранилища.
+//
+// Параметры:
+//
+//	fileStorage - путь к файлу-хранилищу
+//	needRestore - нужно ли восстанавливать значения метрик из файла
+//	storeInterval - интервал для сброса значений в файл
 func NewFileStorage(fileStorage string, needRestore bool, storeInterval uint) (*FileStorage, error) {
 	file, err := os.OpenFile(fileStorage, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
@@ -35,6 +45,7 @@ func NewFileStorage(fileStorage string, needRestore bool, storeInterval uint) (*
 	}, nil
 }
 
+// Restore метод для восстановления значения из файла
 func (fs *FileStorage) Restore(ctx context.Context, st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
@@ -68,6 +79,7 @@ func (fs *FileStorage) Restore(ctx context.Context, st repository.Storage) error
 	return nil
 }
 
+// Sync сброс значения из хранилища в файл
 func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 	fs.fileMutex.Lock()
 	defer fs.fileMutex.Unlock()
@@ -119,6 +131,7 @@ func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 	return nil
 }
 
+// SyncByInterval сброс значения в файл с заданным интервалом. Если интервал не задан, то не синхронизируется.
 func (fs *FileStorage) SyncByInterval(ctx context.Context, storage repository.Storage, ch chan bool) error {
 	if fs.StoreInterval == 0 {
 		close(ch)

@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"net/http/pprof"
+	"sync"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
-	"github.com/sotavant/yandex-metrics/internal/server/midleware"
-	"net/http"
-	"sync"
+	"github.com/sotavant/yandex-metrics/internal/server/middleware"
 )
 
 func main() {
@@ -53,11 +55,11 @@ func main() {
 func initRouters(app *server.App) *chi.Mux {
 	r := chi.NewRouter()
 
-	hasher := midleware.NewHasher(app.Config.HashKey)
+	hasher := middleware.NewHasher(app.Config.HashKey)
 
 	r.Use(hasher.Handler)
-	r.Use(midleware.GzipMiddleware)
-	r.Use(midleware.WithLogging)
+	r.Use(middleware.GzipMiddleware)
+	r.Use(middleware.WithLogging)
 
 	r.Post("/update/{type}/{name}/{value}", handlers.UpdateHandler(app))
 	r.Get("/value/{type}/{name}", handlers.GetValueHandler(app))
@@ -67,5 +69,12 @@ func initRouters(app *server.App) *chi.Mux {
 	r.Get("/", handlers.GetValuesHandler(app))
 	r.Get("/ping", handlers.PingDBHandler(app.DBConn))
 
+	initProfiling(r)
+
 	return r
+}
+
+func initProfiling(r *chi.Mux) {
+	r.HandleFunc("/pprof/*", pprof.Index)
+	r.Handle("/pprof/heap", pprof.Handler("heap"))
 }

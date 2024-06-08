@@ -2,6 +2,7 @@ package internal
 
 import "go.uber.org/zap"
 
+// Logger Глобальная переменная для инициализированного логера
 var Logger zap.SugaredLogger
 
 func InitLogger() {

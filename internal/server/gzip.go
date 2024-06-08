@@ -6,11 +6,13 @@ import (
 	"net/http"
 )
 
+// CompressWriter вспомогательная структура для записи ответа в формате gzip
 type CompressWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
 }
 
+// CompressReader вспомогательная структура для чтения запроса в формате gzip
 type CompressReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader

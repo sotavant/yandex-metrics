@@ -1,3 +1,4 @@
+// Package utils Вспомогательные утилиты
 package utils
 
 import (
@@ -8,6 +9,7 @@ import (
 
 const HasherHeaderKey = "HashSHA256"
 
+// GetHash Получения зашифрованного сообщения, с помощью ключа key. Используется алгоритм sha256
 func GetHash(data []byte, key string) (hash string, err error) {
 	cleanData := strings.TrimSuffix(string(data), "\n")
 	h := sha256.New()

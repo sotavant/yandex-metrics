@@ -1,30 +1,35 @@
+// Package client Данный пакет служит для отправки собранных метрик на сервер.
 package client
 
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"errors"
+	"syscall"
+	"time"
+
 	"github.com/go-resty/resty/v2"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 	"github.com/sotavant/yandex-metrics/internal/utils"
-	"syscall"
-	"time"
 )
 
+// настройки
 const (
-	updateURL       = `/update/`
-	batchUpdateURL  = `/updates/`
-	counterType     = `counter`
-	gaugeType       = `gauge`
+	updateURL       = `/update/`  // адрес для отправки одного значения
+	batchUpdateURL  = `/updates/` // адрес для отправки пакета со всеми метриками
+	counterType     = `counter`   // название типа со счетчиком
+	gaugeType       = `gauge`     // название типа с метриками
 	poolCounterName = `PollCount`
 )
 
 type Semaphore struct {
 	semaCh chan struct{}
 }
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func NewSemaphore(maxReq int) *Semaphore {
 	return &Semaphore{
@@ -40,6 +45,8 @@ func (s *Semaphore) Release() {
 	<-s.semaCh
 }
 
+// ReportMetric отправляет метрики.
+// На вход принимает хранилище и количество воркеров (параллельных процессов)
 func ReportMetric(ms *storage.MetricsStorage, workerCount int) {
 	//sendGauge(ms)
 	//sendCounter(ms)
@@ -159,13 +166,14 @@ func sendRequest(jsonData []byte, url string) {
 func getCompressedData(data []byte) *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
+	zb.Reset(buf)
 	_, err := zb.Write(data)
 
 	if err != nil {
 		panic(err)
 	}
 
-	if err := zb.Close(); err != nil {
+	if err = zb.Close(); err != nil {
 		panic(err)
 	}
 

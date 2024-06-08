@@ -2,19 +2,19 @@ package test
 
 import (
 	"context"
+	"os"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"strings"
-	"testing"
 )
 
-func InitConnection(ctx context.Context, t *testing.T) (*pgxpool.Pool, string, string, error) {
+func InitConnection(ctx context.Context, t assert.TestingT) (*pgxpool.Pool, string, string, error) {
 	internal.InitLogger()
-	dns := os.Getenv("DATABASE_DSN")
-	tableName := os.Getenv("TABLE_NAME")
+	dns := os.Getenv("TEST_DATABASE_DSN")
+	tableName := os.Getenv("TEST_TABLE_NAME")
 
 	if dns == "" || tableName == "" {
 		return nil, "", "", nil

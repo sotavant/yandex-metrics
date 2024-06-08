@@ -2,12 +2,14 @@ package storage
 
 import (
 	"context"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/utils"
-	"time"
 )
 
+// InitDB инициализация соединения с базой данных
 func InitDB(ctx context.Context, DSN string) (*pgxpool.Pool, error) {
 	if DSN == "" {
 		return nil, nil
@@ -27,6 +29,7 @@ func InitDB(ctx context.Context, DSN string) (*pgxpool.Pool, error) {
 	return dbConn, nil
 }
 
+// CheckConnection проверрка соединения с базой данных
 func CheckConnection(ctx context.Context, pool *pgxpool.Pool) bool {
 	intervals := utils.GetRetryWaitTimes()
 	retries := len(intervals) + 1
