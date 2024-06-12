@@ -13,7 +13,19 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/middleware"
 )
 
+// Build info.
+// Need define throw ldflags:
+//
+//	go build -ldflags "-X main.buildVersion=0.1 -X 'main.buildDate=$(date +'%Y/%m/%d')' -X 'main.buildCommit=$(git rev-parse --short HEAD)'"
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 func main() {
+	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
+	const chanCount = 2
 	ctx := context.Background()
 	internal.InitLogger()
 
@@ -28,7 +40,7 @@ func main() {
 	httpChan := make(chan bool)
 	syncChan := make(chan bool)
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(chanCount)
 
 	go func() {
 		err = http.ListenAndServe(appInstance.Config.Addr, r)
@@ -53,6 +65,7 @@ func main() {
 }
 
 func initRouters(app *server.App) *chi.Mux {
+
 	r := chi.NewRouter()
 
 	hasher := middleware.NewHasher(app.Config.HashKey)

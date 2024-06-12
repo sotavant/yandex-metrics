@@ -38,7 +38,7 @@ func InitConnection(ctx context.Context, t assert.TestingT) (*pgxpool.Pool, stri
 }
 
 func DropTable(ctx context.Context, conn *pgxpool.Pool, tableName string) error {
-	_, err := conn.Exec(ctx, strings.ReplaceAll("drop table if exists $1", "$1", tableName))
+	_, err := conn.Exec(ctx, strings.ReplaceAll("drop table if exists $1 cascade", "$1", tableName))
 	return err
 }
 

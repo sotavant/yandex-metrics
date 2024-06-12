@@ -24,8 +24,8 @@ import (
 
 func Test_getValueHandler(t *testing.T) {
 	type want struct {
-		status int
 		value  string
+		status int
 	}
 
 	ctx := context.Background()
@@ -46,11 +46,11 @@ func Test_getValueHandler(t *testing.T) {
 		mType         string
 		mName         string
 		ctxMetricName string
-		counterValue  int64
-		gaugeValue    float64
-		want          want
 		request       string
+		want          want
+		gaugeValue    float64
 		memory        bool
+		counterValue  int64
 	}{
 		{
 			name:          "getExistCounterValue",
@@ -59,8 +59,8 @@ func Test_getValueHandler(t *testing.T) {
 			ctxMetricName: `ss`,
 			counterValue:  3,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusOK, value: `3`},
 			request: `/value/counter/ss`,
 			memory:  true,
@@ -71,8 +71,8 @@ func Test_getValueHandler(t *testing.T) {
 			mName:         `ss`,
 			ctxMetricName: `sss`,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusNotFound},
 			request: `/value/counter/ss`,
 			memory:  true,
@@ -85,8 +85,8 @@ func Test_getValueHandler(t *testing.T) {
 			counterValue:  3,
 			gaugeValue:    3,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusOK, value: `3`},
 			request: `/value/gauge/ss`,
 			memory:  true,
@@ -97,8 +97,8 @@ func Test_getValueHandler(t *testing.T) {
 			mName:         `ss`,
 			ctxMetricName: `sss`,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusNotFound},
 			request: `/value/gauge/ss`,
 			memory:  true,
@@ -110,8 +110,8 @@ func Test_getValueHandler(t *testing.T) {
 			ctxMetricName: `ss`,
 			counterValue:  3,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusOK, value: `3`},
 			request: `/value/counter/ss`,
 			memory:  false,
@@ -122,8 +122,8 @@ func Test_getValueHandler(t *testing.T) {
 			mName:         `ss`,
 			ctxMetricName: `sss`,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusNotFound},
 			request: `/value/counter/ss`,
 			memory:  false,
@@ -136,8 +136,8 @@ func Test_getValueHandler(t *testing.T) {
 			counterValue:  3,
 			gaugeValue:    3,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusOK, value: `3`},
 			request: `/value/gauge/ss`,
 			memory:  false,
@@ -148,8 +148,8 @@ func Test_getValueHandler(t *testing.T) {
 			mName:         `ss`,
 			ctxMetricName: `sss`,
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusNotFound},
 			request: `/value/gauge/ss`,
 			memory:  false,
@@ -211,8 +211,8 @@ func Test_getValueHandler(t *testing.T) {
 
 func Test_getValuesHandler(t *testing.T) {
 	type want struct {
-		status int
 		value  string
+		status int
 	}
 
 	type values []struct {
@@ -222,16 +222,16 @@ func Test_getValuesHandler(t *testing.T) {
 
 	tests := []struct {
 		name    string
+		request string
 		values  values
 		want    want
-		request string
 	}{
 		{
 			name:   "emptyValue",
 			values: values{},
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusOK, value: `no value`},
 		},
 		{
@@ -243,8 +243,8 @@ func Test_getValuesHandler(t *testing.T) {
 				},
 			},
 			want: struct {
-				status int
 				value  string
+				status int
 			}{status: http.StatusOK, value: `<p>ss: 134.456</p>`},
 		},
 		{
@@ -260,8 +260,8 @@ func Test_getValuesHandler(t *testing.T) {
 				},
 			},
 			want: struct {
-				status int
 				value  string
+				status int
 				//}{status: http.StatusOK, value: `<p>pp: -456.123</p><p>ss: 134.456</p>`},
 			}{status: http.StatusOK, value: `<p>pp: -456.123</p><p>ss: 134.456</p>`},
 		},
@@ -308,8 +308,8 @@ func Test_pingDBHandler(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
 		conf       *config.Config
+		name       string
 		wantStatus int
 	}{
 		{
@@ -463,7 +463,9 @@ func ExamplePingDBHandler() {
 	h := http.HandlerFunc(PingDBHandler(nil))
 	h(w, request)
 	result := w.Result()
-	defer result.Body.Close()
+	defer func() {
+		_ = result.Body.Close()
+	}()
 	fmt.Println(result.StatusCode)
 
 	// Output:

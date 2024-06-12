@@ -134,8 +134,8 @@ func TestMemStorage_AddValue(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		args    args
 		wantErr assert.ErrorAssertionFunc
+		args    args
 	}{
 		{
 			name: "correct type",

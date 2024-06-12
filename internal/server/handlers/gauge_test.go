@@ -29,12 +29,12 @@ func Test_handleGauge(t *testing.T) {
 	}
 
 	tests := []struct {
+		storage *memory.MetricsRepository
 		name    string
 		request string
-		storage *memory.MetricsRepository
-		want    want
-		mName   string
 		mValue  string
+		mName   string
+		want    want
 	}{
 		{
 			name:    `newValue`,

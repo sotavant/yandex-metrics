@@ -1,6 +1,12 @@
 package internal
 
-import "go.uber.org/zap"
+import (
+	"fmt"
+
+	"go.uber.org/zap"
+)
+
+var buildDefaultValue = "N/A"
 
 // Logger Глобальная переменная для инициализированного логера
 var Logger zap.SugaredLogger
@@ -19,4 +25,21 @@ func InitLogger() {
 		panic(err)
 	}
 	Logger = *logger.Sugar()
+}
+
+// PrintBuildInfo output to stdout build info
+func PrintBuildInfo(version, date, commit string) {
+	if version == "" {
+		version = buildDefaultValue
+	}
+
+	if date == "" {
+		date = buildDefaultValue
+	}
+
+	if commit == "" {
+		commit = buildDefaultValue
+	}
+
+	fmt.Printf("Build version: %s\nBuild date: %s\nBuild commit: %s\n", version, date, commit)
 }
