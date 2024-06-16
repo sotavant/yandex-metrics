@@ -69,7 +69,12 @@ func initRouters(app *server.App) *chi.Mux {
 	r := chi.NewRouter()
 
 	hasher := middleware.NewHasher(app.Config.HashKey)
+	crypto, err := middleware.NewCrypto(app.Config.CryptoKeyPath)
+	if err != nil {
+		internal.Logger.Infow("crypto initialization failed", "error", err)
+	}
 
+	r.Use(crypto.Handler)
 	r.Use(hasher.Handler)
 	r.Use(middleware.GzipMiddleware)
 	r.Use(middleware.WithLogging)

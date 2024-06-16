@@ -23,6 +23,7 @@ const (
 	databaseDSNVar     = `DATABASE_DSN`
 	tableNameVar       = `TABLE_NAME`
 	HashKeyVar         = `KEY`
+	CryptKeyVar        = `CRYPTO_KEY`
 )
 
 // Config Структура для хранения параметров
@@ -32,6 +33,7 @@ type Config struct {
 	FileStoragePath string
 	DatabaseDSN     string
 	TableName       string
+	CryptoKeyPath   string
 	StoreInterval   uint
 	Restore         bool
 }
@@ -54,6 +56,7 @@ func (c *Config) ParseFlags() {
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database DSN")
 	flag.StringVar(&c.TableName, "t", DefaultTableName, "table name")
 	flag.StringVar(&c.HashKey, "k", "", "hash key")
+	flag.StringVar(&c.CryptoKeyPath, "crypto-key", "", "path to public key")
 
 	flag.Parse()
 
@@ -93,5 +96,9 @@ func (c *Config) ParseFlags() {
 
 	if hashKey := os.Getenv(HashKeyVar); hashKey != "" {
 		c.HashKey = hashKey
+	}
+
+	if cryptoKey := os.Getenv(CryptKeyVar); cryptoKey != "" {
+		c.CryptoKeyPath = cryptoKey
 	}
 }

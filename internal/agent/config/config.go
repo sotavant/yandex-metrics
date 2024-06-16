@@ -24,6 +24,7 @@ const (
 	pollIntVar   = `POLL_INTERVAL`
 	HashKeyVar   = `KEY`
 	RateLimitVar = `RATE_LIMIT`
+	CryptKeyVar  = `CRYPTO_KEY`
 )
 
 // AppConfig глобальная переменная, в которой хранятся конфигурации.
@@ -33,6 +34,7 @@ var AppConfig *Config
 type Config struct {
 	Addr           string
 	HashKey        string
+	CryptoKeyPath  string
 	ReportInterval int
 	PollInterval   int
 	RateLimit      int
@@ -48,6 +50,7 @@ func InitConfig() {
 func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Addr, "a", serverAddress, "server address")
 	flag.StringVar(&c.HashKey, "k", "someKey", "hash key")
+	flag.StringVar(&c.CryptoKeyPath, "crypto-key", "", "path to public key")
 	flag.IntVar(&c.PollInterval, "p", pollInterval, "pollInterval")
 	flag.IntVar(&c.ReportInterval, "r", reportInterval, "reportInterval")
 	flag.IntVar(&c.RateLimit, "l", rateLimit, "rate limit")
@@ -85,5 +88,9 @@ func (c *Config) ParseFlags() {
 
 	if hashKey := os.Getenv(HashKeyVar); hashKey != "" {
 		c.HashKey = hashKey
+	}
+
+	if cryptoKey := os.Getenv(CryptKeyVar); cryptoKey != "" {
+		c.CryptoKeyPath = cryptoKey
 	}
 }
