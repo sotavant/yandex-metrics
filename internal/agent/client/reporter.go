@@ -47,11 +47,11 @@ func (s *Semaphore) Release() {
 
 // ReportMetric отправляет метрики.
 // На вход принимает хранилище и количество воркеров (параллельных процессов)
-func ReportMetric(ms *storage.MetricsStorage, workerCount int) {
+func ReportMetric(ms *storage.MetricsStorage, workerCount int, cipher *utils.Cipher) {
 	//sendGauge(ms)
 	//sendCounter(ms)
 	//sendBatchMetrics(ms)
-	sendMetricsByWorkers(ms, workerCount)
+	sendMetricsByWorkers(ms, workerCount, cipher)
 }
 
 func sendGauge(ms *storage.MetricsStorage) {
@@ -138,15 +138,15 @@ func sendRequest(jsonData []byte, url string) {
 	counter := 1
 	data := getCompressedData(jsonData)
 
+	client := resty.New()
+	req := client.R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip")
+
+	req = addHashData(req, data)
+	req = addCipheredData(req, data)
+
 	for counter <= retries {
-		client := resty.New()
-		req := client.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetBody(data)
-
-		req = addHashData(req, data)
-
 		internal.Logger.Infoln("sending request", string(jsonData))
 		_, err := req.Post("http://" + config.AppConfig.Addr + url)
 
@@ -179,6 +179,12 @@ func getCompressedData(data []byte) *bytes.Buffer {
 	}
 
 	return buf
+}
+
+func addCipheredData(req *resty.Request, data []byte) (*resty.Request, error) {
+
+	req.SetBody(data)
+	return req, nil
 }
 
 func addHashData(req *resty.Request, buf *bytes.Buffer) *resty.Request {

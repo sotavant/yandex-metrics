@@ -72,6 +72,10 @@ func getPubKey(publicKeyPath string) (*rsa.PublicKey, error) {
 }
 
 func (c *Cipher) Encrypt(plaintext []byte) ([]byte, error) {
+	if c.publicKey == nil {
+		return plaintext, nil
+	}
+
 	ciphertext, err := rsa.EncryptPKCS1v15(rand.Reader, c.publicKey, plaintext)
 	if err != nil {
 		return nil, err
@@ -81,10 +85,22 @@ func (c *Cipher) Encrypt(plaintext []byte) ([]byte, error) {
 }
 
 func (c *Cipher) Decrypt(encrypted []byte) ([]byte, error) {
+	if c.privateKey == nil {
+		return encrypted, nil
+	}
+
 	plaintext, err := rsa.DecryptPKCS1v15(rand.Reader, c.privateKey, encrypted)
 	if err != nil {
 		return nil, err
 	}
 
 	return plaintext, nil
+}
+
+func (c *Cipher) IsPrivateKeyExist() bool {
+	return c.privateKey != nil
+}
+
+func (c *Cipher) IsPublicKeyExist() bool {
+	return c.publicKey != nil
 }

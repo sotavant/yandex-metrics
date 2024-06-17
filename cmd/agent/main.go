@@ -9,6 +9,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/agent/client"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
+	"github.com/sotavant/yandex-metrics/internal/utils"
 )
 
 // Build info.
@@ -29,6 +30,11 @@ func main() {
 	var poolIntervalDuration = time.Duration(config.AppConfig.PollInterval) * time.Second
 	var reportIntervalDuration = time.Duration(config.AppConfig.ReportInterval) * time.Second
 	ms := storage.NewStorage()
+	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath)
+	if err != nil {
+		panic(err)
+	}
+
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
 	updateAddValuesChan := make(chan bool)
@@ -74,19 +80,7 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				client.ReportMetric(ms, config.AppConfig.RateLimit)
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			select {
-			case <-reportMetricsChan:
-				return
-			default:
-				<-time.After(reportIntervalDuration)
-				client.ReportMetric(ms, config.AppConfig.RateLimit)
+				client.ReportMetric(ms, config.AppConfig.RateLimit, ch)
 			}
 		}
 	}()
