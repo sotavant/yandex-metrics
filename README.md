@@ -33,8 +33,7 @@ git fetch template && git checkout template/main .github
 
 ## Локальное тестирование
 
-TABLE_NAME=test_table DATABASE_DSN="postgres://ya_metrics:ya_metrics@localhost:5432/ya_metrics?sslmode=disable"; go test
--v ./...
+export TEST_CRYPT_PUB_KEY=/Users/fanishadeev/go/src/github.com/sotavant/yandex-metrics/cmd/crypto/public.pem TEST_CRYPT_PRIV_KEY=/Users/fanishadeev/go/src/github.com/sotavant/yandex-metrics/cmd/crypto/private.pem TEST_TABLE_NAME=test_table TEST_DATABASE_DSN="postgres://ya_metrics:ya_metrics@localhost:5432/ya_metrics?sslmode=disable"; go test ./...
 
 -17849.57kB
 

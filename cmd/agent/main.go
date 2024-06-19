@@ -29,11 +29,15 @@ func main() {
 
 	var poolIntervalDuration = time.Duration(config.AppConfig.PollInterval) * time.Second
 	var reportIntervalDuration = time.Duration(config.AppConfig.ReportInterval) * time.Second
+	var err error
+
 	ms := storage.NewStorage()
 	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath)
 	if err != nil {
 		panic(err)
 	}
+
+	r := client.NewReporter(ch)
 
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
@@ -41,7 +45,7 @@ func main() {
 	pprofChan := make(chan bool)
 
 	go func() {
-		err := http.ListenAndServe(":8081", nil)
+		err = http.ListenAndServe(":8081", nil)
 
 		if err != nil {
 			close(pprofChan)
@@ -80,7 +84,7 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				client.ReportMetric(ms, config.AppConfig.RateLimit, ch)
+				r.ReportMetric(ms, config.AppConfig.RateLimit)
 			}
 		}
 	}()

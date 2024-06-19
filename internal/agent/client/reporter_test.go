@@ -17,6 +17,7 @@ func BenchmarkReportMetric(b *testing.B) {
 	}))
 	defer server.Close()
 
+	r := NewReporter(nil)
 	storage := storage2.NewStorage()
 	storage.UpdateValues()
 	storage.UpdateAdditionalValues()
@@ -30,16 +31,17 @@ func BenchmarkReportMetric(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		ReportMetric(storage, config.AppConfig.RateLimit)
+		r.ReportMetric(storage, config.AppConfig.RateLimit)
 	}
 }
 
-func ExampleReportMetric() {
+func ExampleReporter_ReportMetric() {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
+	r := NewReporter(nil)
 	ms := storage2.NewStorage()
 	ms.UpdateValues()
 	ms.UpdateAdditionalValues()
@@ -50,5 +52,5 @@ func ExampleReportMetric() {
 		RateLimit: 10,
 	}
 	internal.InitLogger()
-	ReportMetric(ms, config.AppConfig.RateLimit)
+	r.ReportMetric(ms, config.AppConfig.RateLimit)
 }
