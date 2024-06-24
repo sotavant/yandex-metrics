@@ -17,7 +17,7 @@ const (
 	DefaultServerAddress = "localhost:8080"
 	DefaultTableName     = "metric"
 	DefaultStoreInterval = 300
-	DefaultMetricDb      = "/tmp/metrics-db.json"
+	DefaultMetricDB      = "/tmp/metrics-db.json"
 )
 
 // Названия переменных окружения
@@ -110,7 +110,7 @@ func (c *Config) ParseFlags() {
 	if storeFile != "" {
 		c.FileStoragePath = storeFile
 	} else if c.FileStoragePath == "" {
-		c.FileStoragePath = DefaultMetricDb
+		c.FileStoragePath = DefaultMetricDB
 	}
 
 	if databaseDsn != "" {
