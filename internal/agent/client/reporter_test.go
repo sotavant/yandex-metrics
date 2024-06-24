@@ -3,7 +3,10 @@ package client
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/sotavant/yandex-metrics/internal"
@@ -21,6 +24,8 @@ func BenchmarkReportMetric(b *testing.B) {
 	storage := storage2.NewStorage()
 	storage.UpdateValues()
 	storage.UpdateAdditionalValues()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	config.AppConfig = &config.Config{
 		Addr:      strings.TrimPrefix(server.URL, "http://"),
@@ -31,7 +36,7 @@ func BenchmarkReportMetric(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		r.ReportMetric(storage, config.AppConfig.RateLimit)
+		r.ReportMetric(storage, config.AppConfig.RateLimit, sigs)
 	}
 }
 
@@ -41,6 +46,8 @@ func ExampleReporter_ReportMetric() {
 	}))
 	defer server.Close()
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	r := NewReporter(nil)
 	ms := storage2.NewStorage()
 	ms.UpdateValues()
@@ -52,5 +59,5 @@ func ExampleReporter_ReportMetric() {
 		RateLimit: 10,
 	}
 	internal.InitLogger()
-	r.ReportMetric(ms, config.AppConfig.RateLimit)
+	r.ReportMetric(ms, config.AppConfig.RateLimit, sigs)
 }

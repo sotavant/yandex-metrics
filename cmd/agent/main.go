@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/sotavant/yandex-metrics/internal"
@@ -31,6 +34,9 @@ func main() {
 	var reportIntervalDuration = time.Duration(config.AppConfig.ReportInterval) * time.Second
 	var err error
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
 	ms := storage.NewStorage()
 	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath)
 	if err != nil {
@@ -45,7 +51,7 @@ func main() {
 	pprofChan := make(chan bool)
 
 	go func() {
-		err = http.ListenAndServe(":8081", nil)
+		err = http.ListenAndServe(":8082", nil)
 
 		if err != nil {
 			close(pprofChan)
@@ -84,7 +90,13 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				r.ReportMetric(ms, config.AppConfig.RateLimit)
+				shutdown := r.ReportMetric(ms, config.AppConfig.RateLimit, sigs)
+				if shutdown {
+					close(pprofChan)
+					close(updateAddValuesChan)
+					close(updateValuesChan)
+					close(reportMetricsChan)
+				}
 			}
 		}
 	}()

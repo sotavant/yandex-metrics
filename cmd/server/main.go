@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/pprof"
-	"sync"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
@@ -25,7 +29,6 @@ var (
 
 func main() {
 	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
-	const chanCount = 2
 	ctx := context.Background()
 	internal.InitLogger()
 
@@ -33,35 +36,39 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer appInstance.SyncFs(ctx)
 
 	r := initRouters(appInstance)
-
-	httpChan := make(chan bool)
-	syncChan := make(chan bool)
-	var wg sync.WaitGroup
-	wg.Add(chanCount)
+	srv := http.Server{Addr: appInstance.Config.Addr, Handler: r}
+	jobsDone := make(chan struct{})
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
-		err = http.ListenAndServe(appInstance.Config.Addr, r)
+		<-sigint
+		if err = srv.Shutdown(ctx); err != nil {
+			internal.Logger.Infow("shutdown err", "err", err)
+		}
+		appInstance.SyncFs(ctx)
+		close(jobsDone)
+		fmt.Println("shutdown complete")
+	}()
 
-		if err != nil {
-			close(httpChan)
-			panic(err)
+	go func() {
+		if err = srv.ListenAndServe(); err != nil && !errors.Is(http.ErrServerClosed, err) {
+			internal.Logger.Infow("http server err", "err", err)
 		}
 	}()
 
 	go func() {
 		if appInstance.Fs == nil {
-			close(syncChan)
 			return
 		}
-		if err = appInstance.Fs.SyncByInterval(ctx, appInstance.Storage, syncChan); err != nil {
+		if err = appInstance.Fs.SyncByInterval(ctx, appInstance.Storage); err != nil {
 			panic(err)
 		}
 	}()
 
-	wg.Wait()
+	<-jobsDone
 }
 
 func initRouters(app *server.App) *chi.Mux {

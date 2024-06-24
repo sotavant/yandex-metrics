@@ -3,6 +3,9 @@ package server
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
@@ -58,6 +61,7 @@ func InitApp(ctx context.Context) (*App, error) {
 
 // SyncFs Метод для синхронизация значения в памяти и в файле. В том случае, если используется in-memory хранилище
 func (app *App) SyncFs(ctx context.Context) {
+	fmt.Println("syncing fs")
 	needSync := false
 
 	switch app.Storage.(type) {
@@ -75,7 +79,7 @@ func (app *App) SyncFs(ctx context.Context) {
 	}
 
 	err = app.Fs.File.Close()
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrClosed) {
 		panic(err)
 	}
 }

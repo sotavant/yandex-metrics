@@ -101,10 +101,10 @@ func (c *Config) ParseFlags() {
 
 	if storeInterval == 0 {
 		if c.StoreInterval == 0 {
-			storeInterval = DefaultStoreInterval
-		} else {
-			storeInterval = c.StoreInterval
+			c.StoreInterval = DefaultStoreInterval
 		}
+	} else {
+		c.StoreInterval = storeInterval
 	}
 
 	if storeFile != "" {

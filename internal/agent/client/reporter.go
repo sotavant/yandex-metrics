@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"os"
 	"syscall"
 	"time"
 
@@ -39,11 +40,19 @@ func NewReporter(ch *utils.Cipher) *Reporter {
 
 // ReportMetric отправляет метрики.
 // На вход принимает хранилище и количество воркеров (параллельных процессов)
-func (r *Reporter) ReportMetric(ms *storage.MetricsStorage, workerCount int) {
+func (r *Reporter) ReportMetric(ms *storage.MetricsStorage, workerCount int, sigs chan os.Signal) bool {
 	//sendGauge(ms)
 	//sendCounter(ms)
 	//sendBatchMetrics(ms)
-	r.sendMetricsByWorkers(ms, workerCount)
+	for {
+		r.sendMetricsByWorkers(ms, workerCount)
+		select {
+		case <-sigs:
+			return true
+		default:
+			return false
+		}
+	}
 }
 
 func (r *Reporter) sendGauge(ms *storage.MetricsStorage) {
