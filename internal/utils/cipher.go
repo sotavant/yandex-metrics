@@ -98,9 +98,17 @@ func (c *Cipher) Decrypt(encrypted []byte) ([]byte, error) {
 }
 
 func (c *Cipher) IsPrivateKeyExist() bool {
-	return c.privateKey != nil
+	if c == nil || c.privateKey == nil {
+		return false
+	}
+
+	return true
 }
 
 func (c *Cipher) IsPublicKeyExist() bool {
-	return c.publicKey != nil
+	if c == nil || c.publicKey == nil {
+		return false
+	}
+
+	return true
 }
