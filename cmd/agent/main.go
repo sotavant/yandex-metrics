@@ -3,12 +3,16 @@ package main
 import (
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/agent/client"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
+	"github.com/sotavant/yandex-metrics/internal/utils"
 )
 
 // Build info.
@@ -28,14 +32,26 @@ func main() {
 
 	var poolIntervalDuration = time.Duration(config.AppConfig.PollInterval) * time.Second
 	var reportIntervalDuration = time.Duration(config.AppConfig.ReportInterval) * time.Second
+	var err error
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
 	ms := storage.NewStorage()
+	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath)
+	if err != nil {
+		panic(err)
+	}
+
+	r := client.NewReporter(ch)
+
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
 	updateAddValuesChan := make(chan bool)
 	pprofChan := make(chan bool)
 
 	go func() {
-		err := http.ListenAndServe(":8081", nil)
+		err = http.ListenAndServe(":8082", nil)
 
 		if err != nil {
 			close(pprofChan)
@@ -74,19 +90,13 @@ func main() {
 				return
 			default:
 				<-time.After(reportIntervalDuration)
-				client.ReportMetric(ms, config.AppConfig.RateLimit)
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			select {
-			case <-reportMetricsChan:
-				return
-			default:
-				<-time.After(reportIntervalDuration)
-				client.ReportMetric(ms, config.AppConfig.RateLimit)
+				shutdown := r.ReportMetric(ms, config.AppConfig.RateLimit, sigs)
+				if shutdown {
+					close(pprofChan)
+					close(updateAddValuesChan)
+					close(updateValuesChan)
+					close(reportMetricsChan)
+				}
 			}
 		}
 	}()

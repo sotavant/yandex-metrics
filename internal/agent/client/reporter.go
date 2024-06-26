@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"os"
 	"syscall"
 	"time"
 
@@ -25,36 +26,36 @@ const (
 	poolCounterName = `PollCount`
 )
 
-type Semaphore struct {
-	semaCh chan struct{}
-}
-
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-func NewSemaphore(maxReq int) *Semaphore {
-	return &Semaphore{
-		semaCh: make(chan struct{}, maxReq),
+type Reporter struct {
+	ch *utils.Cipher
+}
+
+func NewReporter(ch *utils.Cipher) *Reporter {
+	return &Reporter{
+		ch: ch,
 	}
-}
-
-func (s *Semaphore) Acquire() {
-	s.semaCh <- struct{}{}
-}
-
-func (s *Semaphore) Release() {
-	<-s.semaCh
 }
 
 // ReportMetric отправляет метрики.
 // На вход принимает хранилище и количество воркеров (параллельных процессов)
-func ReportMetric(ms *storage.MetricsStorage, workerCount int) {
+func (r *Reporter) ReportMetric(ms *storage.MetricsStorage, workerCount int, sigs chan os.Signal) bool {
 	//sendGauge(ms)
 	//sendCounter(ms)
 	//sendBatchMetrics(ms)
-	sendMetricsByWorkers(ms, workerCount)
+	for {
+		r.sendMetricsByWorkers(ms, workerCount)
+		select {
+		case <-sigs:
+			return true
+		default:
+			return false
+		}
+	}
 }
 
-func sendGauge(ms *storage.MetricsStorage) {
+func (r *Reporter) sendGauge(ms *storage.MetricsStorage) {
 	for k, v := range ms.Metrics {
 		m := internal.Metrics{
 			ID:    k,
@@ -68,11 +69,11 @@ func sendGauge(ms *storage.MetricsStorage) {
 			return
 		}
 
-		sendRequest(jsonData, updateURL)
+		r.sendRequest(jsonData, updateURL)
 	}
 }
 
-func sendBatchMetrics(ms *storage.MetricsStorage) {
+func (r *Reporter) sendBatchMetrics(ms *storage.MetricsStorage) {
 	m := collectMetrics(ms)
 	if len(m) == 0 {
 		return
@@ -84,10 +85,10 @@ func sendBatchMetrics(ms *storage.MetricsStorage) {
 		return
 	}
 
-	sendRequest(jsonData, batchUpdateURL)
+	r.sendRequest(jsonData, batchUpdateURL)
 }
 
-func sendCounter(ms *storage.MetricsStorage) {
+func (r *Reporter) sendCounter(ms *storage.MetricsStorage) {
 	m := internal.Metrics{
 		ID:    poolCounterName,
 		MType: counterType,
@@ -99,10 +100,10 @@ func sendCounter(ms *storage.MetricsStorage) {
 		internal.Logger.Infoln("marshall error", err)
 		return
 	}
-	sendRequest(jsonData, updateURL)
+	r.sendRequest(jsonData, updateURL)
 }
 
-func sendMetricsByWorkers(ms *storage.MetricsStorage, workersCount int) {
+func (r *Reporter) sendMetricsByWorkers(ms *storage.MetricsStorage, workersCount int) {
 	m := collectMetrics(ms)
 	if len(m) == 0 {
 		return
@@ -111,7 +112,7 @@ func sendMetricsByWorkers(ms *storage.MetricsStorage, workersCount int) {
 	jobs := make(chan []byte, len(m))
 
 	for w := 0; w < workersCount; w++ {
-		go worker(jobs)
+		go r.worker(jobs)
 	}
 
 	for _, metric := range m {
@@ -125,28 +126,28 @@ func sendMetricsByWorkers(ms *storage.MetricsStorage, workersCount int) {
 	close(jobs)
 }
 
-func worker(jobs <-chan []byte) {
+func (r *Reporter) worker(jobs <-chan []byte) {
 	for j := range jobs {
-		sendRequest(j, updateURL)
+		r.sendRequest(j, updateURL)
 	}
 }
 
-func sendRequest(jsonData []byte, url string) {
+func (r *Reporter) sendRequest(jsonData []byte, url string) {
 	intervals := utils.GetRetryWaitTimes()
 	retries := len(intervals)
 	retries++
 	counter := 1
 	data := getCompressedData(jsonData)
 
+	client := resty.New()
+	req := client.R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip")
+
+	req = addHashData(req, data)
+	req = r.addCipheredData(req, data)
+
 	for counter <= retries {
-		client := resty.New()
-		req := client.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetBody(data)
-
-		req = addHashData(req, data)
-
 		internal.Logger.Infoln("sending request", string(jsonData))
 		_, err := req.Post("http://" + config.AppConfig.Addr + url)
 
@@ -179,6 +180,20 @@ func getCompressedData(data []byte) *bytes.Buffer {
 	}
 
 	return buf
+}
+
+func (r *Reporter) addCipheredData(req *resty.Request, buf *bytes.Buffer) *resty.Request {
+	if r.ch.IsPublicKeyExist() {
+		cryptedData, err := r.ch.Encrypt(buf.Bytes())
+		if err != nil {
+			internal.Logger.Infoln("error in encrypt buf", err)
+			panic(err)
+		}
+		req.SetBody(cryptedData)
+		return req
+	}
+	req.SetBody(buf)
+	return req
 }
 
 func addHashData(req *resty.Request, buf *bytes.Buffer) *resty.Request {

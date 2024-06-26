@@ -4,6 +4,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -132,12 +133,7 @@ func (fs *FileStorage) Sync(ctx context.Context, st repository.Storage) error {
 }
 
 // SyncByInterval сброс значения в файл с заданным интервалом. Если интервал не задан, то не синхронизируется.
-func (fs *FileStorage) SyncByInterval(ctx context.Context, storage repository.Storage, ch chan bool) error {
-	if fs.StoreInterval == 0 {
-		close(ch)
-		return nil
-	}
-
+func (fs *FileStorage) SyncByInterval(ctx context.Context, storage repository.Storage) error {
 	storeIntervalDuration := time.Duration(fs.StoreInterval) * time.Second
 	forever := make(chan bool)
 	err := func() error {
@@ -147,6 +143,7 @@ func (fs *FileStorage) SyncByInterval(ctx context.Context, storage repository.St
 				return nil
 			default:
 				<-time.After(storeIntervalDuration)
+				fmt.Println("syncing metrics")
 				if err := fs.Sync(ctx, storage); err != nil {
 					return err
 				}
