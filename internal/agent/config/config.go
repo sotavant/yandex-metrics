@@ -151,21 +151,18 @@ func (c *Config) readConfig(configPath string) {
 	cnf, err := os.ReadFile(configPath)
 	if err != nil {
 		internal.Logger.Fatalw("failed to read config file", "err", err)
-		panic(err)
 	}
 
 	fileCnf := &fileConfig{}
 	err = json.Unmarshal(cnf, fileCnf)
 	if err != nil {
 		internal.Logger.Fatalw("failed to parse config file", "err", err)
-		panic(err)
 	}
 
 	if fileCnf.ReportIntervalStr != "" {
 		c.ReportInterval, err = strconv.Atoi(strings.TrimSuffix(fileCnf.ReportIntervalStr, "s"))
 		if err != nil {
 			internal.Logger.Fatalw("failed to parse report interval from file", "err", err)
-			panic(err)
 		}
 	}
 

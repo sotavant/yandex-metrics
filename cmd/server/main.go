@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -50,7 +49,7 @@ func main() {
 		}
 		appInstance.SyncFs(ctx)
 		close(jobsDone)
-		fmt.Println("shutdown complete")
+		internal.Logger.Infow("shutdown complete")
 	}()
 
 	go func() {
@@ -78,7 +77,7 @@ func initRouters(app *server.App) *chi.Mux {
 	hasher := middleware.NewHasher(app.Config.HashKey)
 	crypto, err := middleware.NewCrypto(app.Config.CryptoKeyPath)
 	if err != nil {
-		internal.Logger.Infow("crypto initialization failed", "error", err)
+		internal.Logger.Fatalw("crypto initialization failed", "error", err)
 	}
 
 	r.Use(crypto.Handler)
