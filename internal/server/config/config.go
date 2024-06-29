@@ -31,6 +31,7 @@ const (
 	HashKeyVar         = `KEY`
 	CryptKeyVar        = `CRYPTO_KEY`
 	configPathKeyVar   = `CONFIG`
+	trustedSubnetVar   = `TRUSTED_SUBNET`
 )
 
 // fileConfig для настроек из файла конфига
@@ -40,33 +41,35 @@ type fileConfig struct {
 	StoreFile        string `json:"store_file"`
 	DatabaseDSN      string `json:"database_dsn"`
 	CryptoKey        string `json:"crypto_key"`
+	TrustedSubnet    string `json:"trusted_subnet"`
 	Restore          bool   `json:"restore"`
 }
 
 // Config Структура для хранения параметров
 type Config struct {
-	Addr            string `json:"address"`
+	Addr            string
 	HashKey         string
-	FileStoragePath string `json:"store_file"`
-	DatabaseDSN     string `json:"database_dsn"`
+	FileStoragePath string
+	DatabaseDSN     string
 	TableName       string
-	CryptoKeyPath   string `json:"crypto_key"`
+	CryptoKeyPath   string
+	TrustedSubnet   string
 	StoreInterval   uint
-	Restore         bool `json:"restore"`
+	Restore         bool
 }
 
 // InitConfig инициализация конфигурации
 func InitConfig() *Config {
 	conf := new(Config)
-	conf.ParseFlags()
+	conf.ReadConfig()
 	return conf
 }
 
-// ParseFlags Метод для считывания параметров.
+// ReadConfig Метод для считывания параметров.
 // Сначала считываются значения из командной строки, если они не заданы, то берутся значения по-умолчанию
 // Если заданы переменные окружения, то они переопределяют значения заданные ранее
-func (c *Config) ParseFlags() {
-	var address, storeFile, databaseDsn, cryptoKey, config, cnfShort string
+func (c *Config) ReadConfig() {
+	var address, storeFile, databaseDsn, cryptoKey, config, cnfShort, trustedSubnet string
 	var restore bool
 	var storeInterval uint
 
@@ -80,6 +83,7 @@ func (c *Config) ParseFlags() {
 	flag.StringVar(&cryptoKey, "crypto-key", "", "path to public key")
 	flag.StringVar(&config, "config", "", "path to config file")
 	flag.StringVar(&cnfShort, "c", "", "path to config file")
+	flag.StringVar(&trustedSubnet, "ts", "", "path to config file")
 
 	if config == "" {
 		config = cnfShort
@@ -121,47 +125,11 @@ func (c *Config) ParseFlags() {
 		c.CryptoKeyPath = cryptoKey
 	}
 
-	if envAddr := os.Getenv(addressVar); envAddr != "" {
-		c.Addr = envAddr
+	if trustedSubnet != "" {
+		c.TrustedSubnet = trustedSubnet
 	}
 
-	if storeInt := os.Getenv(storeIntervalVar); storeInt != "" {
-		intVal, err := strconv.ParseUint(storeInt, 10, 32)
-		if err != nil {
-			panic(err)
-		}
-
-		c.StoreInterval = uint(intVal)
-	}
-
-	if storageFile := os.Getenv(fileStoragePathVar); storageFile != "" {
-		c.FileStoragePath = storageFile
-	}
-
-	if needRestore := os.Getenv(restoreVar); needRestore != "" {
-		boolVal, err := strconv.ParseBool(needRestore)
-		if err != nil {
-			panic(err)
-		}
-
-		c.Restore = boolVal
-	}
-
-	if databaseDSN := os.Getenv(databaseDSNVar); databaseDSN != "" {
-		c.DatabaseDSN = databaseDSN
-	}
-
-	if tblName := os.Getenv(tableNameVar); tblName != "" {
-		c.TableName = tblName
-	}
-
-	if hashKey := os.Getenv(HashKeyVar); hashKey != "" {
-		c.HashKey = hashKey
-	}
-
-	if cryptoKey := os.Getenv(CryptKeyVar); cryptoKey != "" {
-		c.CryptoKeyPath = cryptoKey
-	}
+	c.readEnvConfig()
 }
 
 // readFile чтение конфигурации из файла
@@ -211,5 +179,57 @@ func (c *Config) readConfig(configPath string) {
 
 	if fileCnf.StoreFile != "" {
 		c.FileStoragePath = fileCnf.StoreFile
+	}
+
+	if fileCnf.TrustedSubnet != "" {
+		c.TrustedSubnet = fileCnf.TrustedSubnet
+	}
+}
+
+func (c *Config) readEnvConfig() {
+	if envAddr := os.Getenv(addressVar); envAddr != "" {
+		c.Addr = envAddr
+	}
+
+	if storeInt := os.Getenv(storeIntervalVar); storeInt != "" {
+		intVal, err := strconv.ParseUint(storeInt, 10, 32)
+		if err != nil {
+			panic(err)
+		}
+
+		c.StoreInterval = uint(intVal)
+	}
+
+	if storageFile := os.Getenv(fileStoragePathVar); storageFile != "" {
+		c.FileStoragePath = storageFile
+	}
+
+	if needRestore := os.Getenv(restoreVar); needRestore != "" {
+		boolVal, err := strconv.ParseBool(needRestore)
+		if err != nil {
+			panic(err)
+		}
+
+		c.Restore = boolVal
+	}
+
+	if databaseDSN := os.Getenv(databaseDSNVar); databaseDSN != "" {
+		c.DatabaseDSN = databaseDSN
+	}
+
+	if tblName := os.Getenv(tableNameVar); tblName != "" {
+		c.TableName = tblName
+	}
+
+	if hashKey := os.Getenv(HashKeyVar); hashKey != "" {
+		c.HashKey = hashKey
+	}
+
+	if cryptoKeyEnv := os.Getenv(CryptKeyVar); cryptoKeyEnv != "" {
+		c.CryptoKeyPath = cryptoKeyEnv
+	}
+
+	if trustedSubnet := os.Getenv(trustedSubnetVar); trustedSubnet != "" {
+		c.TrustedSubnet = trustedSubnet
 	}
 }
