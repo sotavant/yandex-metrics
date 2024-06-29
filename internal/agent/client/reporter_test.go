@@ -97,13 +97,13 @@ func Test_getCompressedData(t *testing.T) {
 func TestReporter_sendRequestWithIP(t *testing.T) {
 	internal.InitLogger()
 	ip, err := utils.GetLocalIP()
-	wrongIp := net.ParseIP("127.0.0.1")
+	wrongIP := net.ParseIP("127.0.0.1")
 	assert.NoError(t, err)
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		header := req.Header.Get("X-Real-IP")
 		assert.Equal(t, ip.String(), header)
-		assert.NotEqual(t, wrongIp.String(), header)
+		assert.NotEqual(t, wrongIP.String(), header)
 	}))
 
 	defer server.Close()
