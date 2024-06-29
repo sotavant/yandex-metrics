@@ -139,17 +139,23 @@ func (r *Reporter) sendRequest(jsonData []byte, url string) {
 	counter := 1
 	data := getCompressedData(jsonData)
 
+	ip, err := utils.GetLocalIP()
+	if err != nil {
+		internal.Logger.Fatalw("get local ip error", "err", err)
+	}
+
 	client := resty.New()
 	req := client.R().
 		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip")
+		SetHeader("Content-Encoding", "gzip").
+		SetHeader("X-Real-IP", ip.String())
 
 	req = addHashData(req, data)
 	req = r.addCipheredData(req, data)
 
 	for counter <= retries {
 		internal.Logger.Infoln("sending request", string(jsonData))
-		_, err := req.Post("http://" + config.AppConfig.Addr + url)
+		_, err = req.Post("http://" + config.AppConfig.Addr + url)
 
 		if err != nil {
 			internal.Logger.Infoln("error in request", err)

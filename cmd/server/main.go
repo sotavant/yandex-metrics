@@ -76,8 +76,14 @@ func initRouters(app *server.App) *chi.Mux {
 
 	hasher := middleware.NewHasher(app.Config.HashKey)
 	crypto, err := middleware.NewCrypto(app.Config.CryptoKeyPath)
+	ipChecker := middleware.NewIPChecker(app.Config.TrustedSubnet)
+
 	if err != nil {
 		internal.Logger.Fatalw("crypto initialization failed", "error", err)
+	}
+
+	if ipChecker != nil {
+		r.Use(ipChecker.CheckIP)
 	}
 
 	r.Use(crypto.Handler)

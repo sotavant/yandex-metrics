@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -48,7 +47,7 @@ func main() {
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
 	updateAddValuesChan := make(chan bool)
-	pprofChan := make(chan bool)
+	/*pprofChan := make(chan bool)
 
 	go func() {
 		err = http.ListenAndServe(":8082", nil)
@@ -57,7 +56,7 @@ func main() {
 			close(pprofChan)
 			panic(err)
 		}
-	}()
+	}()*/
 
 	go func() {
 		for {
@@ -92,7 +91,7 @@ func main() {
 				<-time.After(reportIntervalDuration)
 				shutdown := r.ReportMetric(ms, config.AppConfig.RateLimit, sigs)
 				if shutdown {
-					close(pprofChan)
+					//close(pprofChan)
 					close(updateAddValuesChan)
 					close(updateValuesChan)
 					close(reportMetricsChan)
@@ -104,5 +103,5 @@ func main() {
 	<-reportMetricsChan
 	<-updateValuesChan
 	<-updateAddValuesChan
-	<-pprofChan
+	//<-pprofChan
 }

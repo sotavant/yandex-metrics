@@ -17,7 +17,8 @@ func TestServerConfig_ReadConfigFromFile(t *testing.T) {
     "store_interval": "1s",
     "store_file": "/path/to/file.db",
     "database_dsn": "",
-    "crypto_key": "/path/to/key.pem" 
+    "crypto_key": "/path/to/key.pem",
+	"trusted_subnet": "125.125.0.0/16"
 } 
 `
 	file, err := os.CreateTemp(os.TempDir(), "config")
@@ -44,6 +45,7 @@ func TestServerConfig_ReadConfigFromFile(t *testing.T) {
 				FileStoragePath: "/path/to/file.db",
 				DatabaseDSN:     "",
 				CryptoKeyPath:   "/path/to/key.pem",
+				TrustedSubnet:   "125.125.0.0/16",
 			},
 		},
 	}
@@ -57,6 +59,7 @@ func TestServerConfig_ReadConfigFromFile(t *testing.T) {
 			assert.Equal(t, tt.want.FileStoragePath, conf.FileStoragePath)
 			assert.Equal(t, tt.want.DatabaseDSN, conf.DatabaseDSN)
 			assert.Equal(t, tt.want.CryptoKeyPath, conf.CryptoKeyPath)
+			assert.Equal(t, tt.want.TrustedSubnet, conf.TrustedSubnet)
 		})
 	}
 }
