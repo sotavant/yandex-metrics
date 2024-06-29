@@ -68,6 +68,9 @@ func ExampleReporter_ReportMetric() {
 }
 
 func Test_getCompressedData(t *testing.T) {
+	var s []byte
+	var err error
+	var gz *gzip.Reader
 	tests := []struct {
 		name string
 		data string
@@ -81,10 +84,10 @@ func Test_getCompressedData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cd := getCompressedData([]byte(tt.data))
 			assert.NotNil(t, cd)
-			gz, err := gzip.NewReader(cd)
+			gz, err = gzip.NewReader(cd)
 
 			assert.NoError(t, err)
-			s, err := io.ReadAll(gz)
+			s, err = io.ReadAll(gz)
 
 			assert.Equal(t, tt.data, string(s))
 		})
