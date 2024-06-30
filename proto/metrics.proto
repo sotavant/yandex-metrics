@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package yandex_metrics;
+
+option go_package = "yandex-metrics/proto";
+
+message Metric {
+  double Value = 1;
+  int64 Delta = 2;
+  string ID = 3;
+  string MType = 4;
+}
+
+message UpdateMetricRequest {
+  Metric metric = 1;
+}
+
+message UpdateMetricResponse {
+  Metric metric = 1;
+  string error = 2;
+}
+
+service Metrics {
+  rpc UpdateMetric(UpdateMetricRequest) returns (UpdateMetricResponse);
+}

@@ -27,6 +27,7 @@ const (
 	HashKeyVar       = `KEY`
 	RateLimitVar     = `RATE_LIMIT`
 	CryptKeyVar      = `CRYPTO_KEY`
+	CryptCertVar     = `CRYPTO_CERT`
 	configPathKeyVar = `CONFIG`
 )
 
@@ -39,6 +40,7 @@ type fileConfig struct {
 	PollIntervalStr   string `json:"poll_interval"`
 	ReportIntervalStr string `json:"report_interval"`
 	CryptoKey         string `json:"crypto_key"`
+	CryptoCert        string `json:"crypto_cert"`
 }
 
 // Config структура для хранения настроек.
@@ -46,6 +48,7 @@ type Config struct {
 	Addr           string
 	HashKey        string
 	CryptoKeyPath  string
+	CryptoCertPath string
 	ReportInterval int
 	PollInterval   int
 	RateLimit      int
@@ -59,11 +62,12 @@ func InitConfig() {
 
 // ParseFlags считыванание значений либо из параметров запуска либо из переменных окружения
 func (c *Config) ParseFlags() {
-	var address, cryptoKey, config, cnfShort string
+	var address, cryptoKey, cryptoCert, config, cnfShort string
 	var pullInterval, reportIntervalFlag int
 
 	flag.StringVar(&address, "a", "", "server address")
 	flag.StringVar(&cryptoKey, "crypto-key", "", "path to public key")
+	flag.StringVar(&cryptoCert, "crypto-cert", "", "path to cert key")
 	flag.IntVar(&pullInterval, "p", 0, "pollInterval")
 	flag.IntVar(&reportIntervalFlag, "r", 0, "reportInterval")
 	flag.StringVar(&c.HashKey, "k", "dd", "hash key")
@@ -85,6 +89,10 @@ func (c *Config) ParseFlags() {
 
 	if cryptoKey != "" {
 		c.CryptoKeyPath = cryptoKey
+	}
+
+	if cryptoCert != "" {
+		c.CryptoCertPath = cryptoCert
 	}
 
 	if pullInterval != 0 {
@@ -135,6 +143,10 @@ func (c *Config) ParseFlags() {
 	if cryptoKeyEnv := os.Getenv(CryptKeyVar); cryptoKeyEnv != "" {
 		c.CryptoKeyPath = cryptoKeyEnv
 	}
+
+	if cryptoCertEnv := os.Getenv(CryptCertVar); cryptoCertEnv != "" {
+		c.CryptoCertPath = cryptoCertEnv
+	}
 }
 
 // readFile чтение конфигурации из файла
@@ -175,6 +187,10 @@ func (c *Config) readConfig(configPath string) {
 
 	if fileCnf.CryptoKey != "" {
 		c.CryptoKeyPath = fileCnf.CryptoKey
+	}
+
+	if fileCnf.CryptoCert != "" {
+		c.CryptoCertPath = fileCnf.CryptoCert
 	}
 
 	if fileCnf.Address != "" {

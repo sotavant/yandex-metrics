@@ -6,15 +6,20 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"os"
+
+	"github.com/sotavant/yandex-metrics/internal"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Cipher struct {
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
+	certPath   string
 }
 
-func NewCipher(privateKeyPath, publicKeyPath string) (*Cipher, error) {
-	if privateKeyPath == "" && publicKeyPath == "" {
+func NewCipher(privateKeyPath, publicKeyPath, certPath string) (*Cipher, error) {
+	if privateKeyPath == "" && publicKeyPath == "" && certPath == "" {
 		return nil, nil
 	}
 
@@ -31,6 +36,7 @@ func NewCipher(privateKeyPath, publicKeyPath string) (*Cipher, error) {
 	return &Cipher{
 		privateKey: privKey,
 		publicKey:  pubKey,
+		certPath:   certPath,
 	}, nil
 }
 
@@ -111,4 +117,17 @@ func (c *Cipher) IsPublicKeyExist() bool {
 	}
 
 	return true
+}
+
+func (c *Cipher) GetGRPCTransportCreds() credentials.TransportCredentials {
+	if c == nil || c.certPath == "" {
+		return insecure.NewCredentials()
+	}
+
+	creds, err := credentials.NewClientTLSFromFile(c.certPath, "")
+	if err != nil {
+		internal.Logger.Fatalw("Failed to create TLS credentials", "err", err)
+	}
+
+	return creds
 }

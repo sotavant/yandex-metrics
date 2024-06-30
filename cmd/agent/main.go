@@ -12,6 +12,8 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 	"github.com/sotavant/yandex-metrics/internal/utils"
+	pb "github.com/sotavant/yandex-metrics/proto"
+	"google.golang.org/grpc"
 )
 
 // Build info.
@@ -37,12 +39,27 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	ms := storage.NewStorage()
-	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath)
+	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath, config.AppConfig.CryptoCertPath)
 	if err != nil {
 		panic(err)
 	}
 
-	r := client.NewReporter(ch)
+	conn, err := grpc.NewClient(config.AppConfig.Addr, grpc.WithTransportCredentials(ch.GetGRPCTransportCreds()))
+	if err != nil {
+		internal.Logger.Fatalw("failed to create grpc client", "error", err)
+	}
+
+	defer func(conn *grpc.ClientConn) {
+		err = conn.Close()
+		if err != nil {
+
+		}
+	}(conn)
+
+	c := pb.NewMetricsClient(conn)
+
+	r := client.NewGRPCReporter(c)
+	//r := client.NewReporter(ch)
 
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
