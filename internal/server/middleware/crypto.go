@@ -16,7 +16,7 @@ type Crypto struct {
 
 // NewCrypto initialize struct
 func NewCrypto(pathToPrivateKey string) (*Crypto, error) {
-	cipher, err := utils.NewCipher(pathToPrivateKey, "")
+	cipher, err := utils.NewCipher(pathToPrivateKey, "", "")
 	if err != nil {
 		return nil, err
 	}

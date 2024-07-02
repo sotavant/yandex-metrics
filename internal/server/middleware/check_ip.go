@@ -1,8 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"net"
 	"net/http"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type IPChecker struct {
@@ -43,4 +49,27 @@ func (ip *IPChecker) CheckIP(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(f)
+}
+
+func (ip *IPChecker) CheckIPInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		ips := md["X-Real-IP"]
+		if len(ips) > 0 {
+			IP := net.ParseIP(ips[0])
+			if IP == nil {
+				return nil, status.Errorf(codes.InvalidArgument, "invalid IP")
+			}
+
+			if !ip.trustedSubnet.Contains(IP) {
+				return nil, status.Errorf(codes.Unauthenticated, "forbidden IP")
+			}
+
+			return handler(ctx, req)
+		}
+
+		return nil, status.Errorf(codes.Unauthenticated, "not found X-Real-IP")
+	} else {
+		return nil, status.Errorf(codes.Unauthenticated, "not found X-Real-IP")
+	}
 }

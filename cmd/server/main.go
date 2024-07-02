@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -14,6 +15,9 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
 	"github.com/sotavant/yandex-metrics/internal/server/middleware"
+	"github.com/sotavant/yandex-metrics/internal/utils"
+	pb "github.com/sotavant/yandex-metrics/proto"
+	"google.golang.org/grpc"
 )
 
 // Build info.
@@ -27,6 +31,9 @@ var (
 )
 
 func main() {
+	var listen net.Listener
+	var srv http.Server
+	var s *grpc.Server
 	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 	ctx := context.Background()
 	internal.InitLogger()
@@ -36,25 +43,46 @@ func main() {
 		panic(err)
 	}
 
-	r := initRouters(appInstance)
-	srv := http.Server{Addr: appInstance.Config.Addr, Handler: r}
+	if appInstance.Config.UseGRPC {
+		listen, err = net.Listen("tcp", appInstance.Config.Addr)
+		if err != nil {
+			internal.Logger.Fatalw("failed to listen", "err", err)
+		}
+
+		s = initGRPCServer(appInstance)
+	} else {
+		r := initRouters(appInstance)
+		srv = http.Server{Addr: appInstance.Config.Addr, Handler: r}
+	}
+
 	jobsDone := make(chan struct{})
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
 		<-sigint
-		if err = srv.Shutdown(ctx); err != nil {
-			internal.Logger.Infow("shutdown err", "err", err)
+		if appInstance.Config.UseGRPC {
+			s.GracefulStop()
+		} else {
+			if err = srv.Shutdown(ctx); err != nil {
+				internal.Logger.Infow("shutdown err", "err", err)
+			}
 		}
+
 		appInstance.SyncFs(ctx)
 		close(jobsDone)
 		internal.Logger.Infow("shutdown complete")
 	}()
 
 	go func() {
-		if err = srv.ListenAndServe(); err != nil && !errors.Is(http.ErrServerClosed, err) {
-			internal.Logger.Infow("http server err", "err", err)
+		if appInstance.Config.UseGRPC {
+			if err = s.Serve(listen); err != nil {
+				internal.Logger.Fatalw("failed to grpc serve", "err", err)
+			}
+		} else {
+			if err = srv.ListenAndServe(); err != nil && !errors.Is(http.ErrServerClosed, err) {
+				internal.Logger.Infow("http server err", "err", err)
+			}
 		}
 	}()
 
@@ -107,4 +135,18 @@ func initRouters(app *server.App) *chi.Mux {
 func initProfiling(r *chi.Mux) {
 	r.HandleFunc("/pprof/*", pprof.Index)
 	r.Handle("/pprof/heap", pprof.Handler("heap"))
+}
+
+func initGRPCServer(app *server.App) *grpc.Server {
+	var ch *utils.Cipher
+	var err error
+	ch, err = utils.NewCipher(app.Config.CryptoKeyPath, "", app.Config.CryptoCertPath)
+	if err != nil {
+		internal.Logger.Fatalw("error initializing cipher", "err", err)
+	}
+
+	s := grpc.NewServer(grpc.Creds(ch.GetServerGRPCTransportCreds()))
+	pb.RegisterMetricsServer(s, &MetricsServer{})
+
+	return s
 }

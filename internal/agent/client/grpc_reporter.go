@@ -2,8 +2,12 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
+	"errors"
 	"os"
+	"syscall"
+	"time"
 
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
@@ -63,13 +67,52 @@ func (r *GRPCReporter) gRPCWorker(jobs <-chan internal.Metrics) {
 }
 
 func (r *GRPCReporter) sendGRPCRequest(m internal.Metrics) {
+	var err error
+	var val float64
+	var delta int64
 	intervals := utils.GetRetryWaitTimes()
 	retries := len(intervals)
 	retries++
-	//counter := 1
+	counter := 1
 
-	//md := r.SetMetadata(m)
-	//ctx := metadata.NewOutgoingContext(context.Background(), md)
+	md := r.SetMetadata(m)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
+	if m.Value != nil {
+		val = *m.Value
+	}
+
+	if m.Delta != nil {
+		delta = *m.Delta
+	}
+
+	pbMetric := pb.Metric{
+		Value: val,
+		Delta: delta,
+		ID:    m.ID,
+		MType: m.MType,
+	}
+
+	for counter <= retries {
+		internal.Logger.Infoln("sending request")
+		_, err = r.c.UpdateMetric(ctx, &pb.UpdateMetricRequest{Metric: &pbMetric})
+
+		if err != nil {
+			internal.Logger.Infoln("error in request", err)
+			if errors.Is(err, syscall.ECONNREFUSED) {
+				time.Sleep(time.Duration(intervals[counter]) * time.Second)
+				counter++
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+
+	if err != nil {
+		internal.Logger.Fatalw("failed to update metrics", "err", err)
+	}
 }
 
 func (r *GRPCReporter) SetMetadata(m internal.Metrics) metadata.MD {

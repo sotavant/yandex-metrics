@@ -79,7 +79,41 @@ func TestCipher_GetGRPCTransportCreds(t *testing.T) {
 				certPath: tt.cert,
 			}
 
-			assert.Equal(t, tt.wantProtocol, c.GetGRPCTransportCreds().Info().SecurityProtocol)
+			assert.Equal(t, tt.wantProtocol, c.GetClientGRPCTransportCreds().Info().SecurityProtocol)
+		})
+	}
+}
+
+func TestCipher_GetServerGRPCTransportCreds(t *testing.T) {
+	certPath := os.Getenv("TEST_CRYPT_CERT_PATH")
+
+	if certPath == "" {
+		return
+	}
+
+	tests := []struct {
+		name         string
+		cert         string
+		wantProtocol string
+	}{
+		{
+			name:         "with certificate",
+			cert:         certPath,
+			wantProtocol: "tls",
+		},
+		{
+			name:         "without certificate",
+			cert:         "",
+			wantProtocol: "insecure",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Cipher{
+				certPath: tt.cert,
+			}
+
+			assert.Equal(t, tt.wantProtocol, c.GetClientGRPCTransportCreds().Info().SecurityProtocol)
 		})
 	}
 }

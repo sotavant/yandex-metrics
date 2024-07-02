@@ -52,6 +52,7 @@ type Config struct {
 	ReportInterval int
 	PollInterval   int
 	RateLimit      int
+	UseGRPC        bool
 }
 
 // InitConfig инициализация значения конфигурации.
@@ -74,6 +75,7 @@ func (c *Config) ParseFlags() {
 	flag.IntVar(&c.RateLimit, "l", rateLimit, "rate limit")
 	flag.StringVar(&config, "config", "", "path to config file")
 	flag.StringVar(&cnfShort, "c", "", "path to config file")
+	flag.BoolVar(&c.UseGRPC, "g", false, "use gRPC")
 
 	flag.Parse()
 

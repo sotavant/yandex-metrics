@@ -5,6 +5,7 @@ package config
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -53,9 +54,11 @@ type Config struct {
 	DatabaseDSN     string
 	TableName       string
 	CryptoKeyPath   string
+	CryptoCertPath  string
 	TrustedSubnet   string
 	StoreInterval   uint
 	Restore         bool
+	UseGRPC         bool
 }
 
 // InitConfig инициализация конфигурации
@@ -81,9 +84,11 @@ func (c *Config) ReadConfig() {
 	flag.StringVar(&c.TableName, "t", DefaultTableName, "table name")
 	flag.StringVar(&c.HashKey, "k", "dd", "hash key")
 	flag.StringVar(&cryptoKey, "crypto-key", "", "path to public key")
+	flag.StringVar(&c.CryptoCertPath, "crypto-cert", "", "path to public key")
 	flag.StringVar(&config, "config", "", "path to config file")
 	flag.StringVar(&cnfShort, "c", "", "path to config file")
 	flag.StringVar(&trustedSubnet, "ts", "", "path to config file")
+	flag.BoolVar(&c.UseGRPC, "g", false, "use gRPC")
 
 	if config == "" {
 		config = cnfShort
@@ -91,6 +96,7 @@ func (c *Config) ReadConfig() {
 
 	flag.Parse()
 
+	fmt.Println("cert path", c.CryptoCertPath)
 	c.readConfig(config)
 
 	if address != "" {

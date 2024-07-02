@@ -26,6 +26,10 @@ var (
 	buildCommit  string
 )
 
+type Reporter interface {
+	ReportMetric(ms *storage.MetricsStorage, workersCount int, signs chan os.Signal) bool
+}
+
 func main() {
 	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 	internal.InitLogger()
@@ -44,22 +48,15 @@ func main() {
 		panic(err)
 	}
 
-	conn, err := grpc.NewClient(config.AppConfig.Addr, grpc.WithTransportCredentials(ch.GetGRPCTransportCreds()))
-	if err != nil {
-		internal.Logger.Fatalw("failed to create grpc client", "error", err)
+	r, gRPCConn := getReporter(config.AppConfig.UseGRPC, ch)
+	if gRPCConn != nil {
+		defer func(conn *grpc.ClientConn) {
+			err = conn.Close()
+			if err != nil {
+
+			}
+		}(gRPCConn)
 	}
-
-	defer func(conn *grpc.ClientConn) {
-		err = conn.Close()
-		if err != nil {
-
-		}
-	}(conn)
-
-	c := pb.NewMetricsClient(conn)
-
-	r := client.NewGRPCReporter(c)
-	//r := client.NewReporter(ch)
 
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
@@ -121,4 +118,18 @@ func main() {
 	<-updateValuesChan
 	<-updateAddValuesChan
 	//<-pprofChan
+}
+
+func getReporter(useGRPC bool, cipher *utils.Cipher) (Reporter, *grpc.ClientConn) {
+	if !useGRPC {
+		return client.NewReporter(cipher), nil
+	}
+
+	conn, err := grpc.NewClient(config.AppConfig.Addr, grpc.WithTransportCredentials(cipher.GetClientGRPCTransportCreds()))
+	if err != nil {
+		internal.Logger.Fatalw("failed to create grpc client", "error", err)
+	}
+
+	c := pb.NewMetricsClient(conn)
+	return client.NewGRPCReporter(c), conn
 }
