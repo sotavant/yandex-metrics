@@ -2,9 +2,13 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/sha256"
+	"encoding/gob"
 	"fmt"
 	"strings"
+
+	"github.com/sotavant/yandex-metrics/internal"
 )
 
 const HasherHeaderKey = "HashSHA256"
@@ -24,4 +28,15 @@ func GetHash(data []byte, key string) (hash string, err error) {
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil)), err
+}
+
+func GetMetricHash(m internal.Metrics, key string) (hash string, err error) {
+	var metricsBuf bytes.Buffer
+	enc := gob.NewEncoder(&metricsBuf)
+	err = enc.Encode(m)
+	if err != nil {
+		return
+	}
+
+	return GetHash(metricsBuf.Bytes(), key)
 }

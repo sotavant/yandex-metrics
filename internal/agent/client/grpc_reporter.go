@@ -1,9 +1,7 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"errors"
 	"os"
 	"syscall"
@@ -132,14 +130,8 @@ func (r *GRPCReporter) addHashMetadata(m internal.Metrics, md metadata.MD) metad
 		return md
 	}
 
-	var metricsBuf bytes.Buffer
-	enc := gob.NewEncoder(&metricsBuf)
-	err := enc.Encode(m)
-	if err != nil {
-		internal.Logger.Fatalw("encode metrics error", "err", err)
-	}
-
-	hash, err := utils.GetHash(metricsBuf.Bytes(), config.AppConfig.HashKey)
+	//hash, err := utils.GetHash(metricsBuf.Bytes(), config.AppConfig.HashKey)
+	hash, err := utils.GetMetricHash(m, config.AppConfig.HashKey)
 	if err != nil {
 		internal.Logger.Fatalw("get hash error", "err", err)
 	}

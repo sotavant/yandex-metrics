@@ -140,12 +140,19 @@ func initProfiling(r *chi.Mux) {
 func initGRPCServer(app *server.App) *grpc.Server {
 	var ch *utils.Cipher
 	var err error
+	var interceptors []grpc.UnaryServerInterceptor
+
 	ch, err = utils.NewCipher(app.Config.CryptoKeyPath, "", app.Config.CryptoCertPath)
 	if err != nil {
 		internal.Logger.Fatalw("error initializing cipher", "err", err)
 	}
 
-	s := grpc.NewServer(grpc.Creds(ch.GetServerGRPCTransportCreds()))
+	if app.Config.TrustedSubnet != "" {
+		ipChecker := middleware.NewIPChecker(app.Config.TrustedSubnet)
+		interceptors = append(interceptors, ipChecker.CheckIPInterceptor)
+	}
+
+	s := grpc.NewServer(grpc.Creds(ch.GetServerGRPCTransportCreds()), grpc.ChainUnaryInterceptor(interceptors...))
 	pb.RegisterMetricsServer(s, &MetricsServer{})
 
 	return s

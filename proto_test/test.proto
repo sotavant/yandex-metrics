@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package yandex_metrics;
+
+option go_package = "yandex-metrics/proto_test";
+
+message SetXRealIPRequest {
+  string IP = 1;
+}
+
+message SetXRealIPResponse {
+  string error = 1;
+}
+
+service Test {
+  rpc SetXRealIP(SetXRealIPRequest) returns (SetXRealIPResponse);
+}
+

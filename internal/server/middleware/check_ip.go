@@ -54,7 +54,7 @@ func (ip *IPChecker) CheckIP(next http.Handler) http.Handler {
 func (ip *IPChecker) CheckIPInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
-		ips := md["X-Real-IP"]
+		ips := md["x-real-ip"]
 		if len(ips) > 0 {
 			IP := net.ParseIP(ips[0])
 			if IP == nil {

@@ -43,7 +43,7 @@ func TestCrypto_Handler(t *testing.T) {
 	fs, err := storage.NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 	assert.NoError(t, err)
 
-	ch, err := utils.NewCipher(privateKeyPath, publicKeyPath)
+	ch, err := utils.NewCipher(privateKeyPath, publicKeyPath, "")
 	assert.NoError(t, err)
 
 	encryptedText, err := ch.Encrypt([]byte(requestBody))
