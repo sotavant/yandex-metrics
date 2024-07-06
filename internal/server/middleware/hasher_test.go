@@ -11,6 +11,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
+	grpc2 "github.com/sotavant/yandex-metrics/internal/server/grpc"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
@@ -172,6 +173,8 @@ func TestHasher_CheckHasInterceptor(t *testing.T) {
 	internal.InitLogger()
 
 	var ctx context.Context
+	var hash string
+	var conn *grpc.ClientConn
 	const hashKey = "hashKey"
 
 	val := 1.333
@@ -181,6 +184,13 @@ func TestHasher_CheckHasInterceptor(t *testing.T) {
 		Delta: nil,
 		ID:    "sss",
 		MType: internal.GaugeType,
+	}
+
+	pbMetric := &pb.Metric{
+		Value: val,
+		Delta: 0,
+		ID:    m.ID,
+		MType: m.MType,
 	}
 
 	mHash, err := utils.GetMetricHash(m, hashKey)
@@ -224,28 +234,30 @@ func TestHasher_CheckHasInterceptor(t *testing.T) {
 
 			lis = bufconn.Listen(bufSize)
 			s := grpc.NewServer(grpc.UnaryInterceptor(hashMiddleware.CheckHashInterceptor))
-			pb.RegisterTestServer(s, &TestGRPCServer{})
+			pb.RegisterMetricsServer(s, &grpc2.MetricServer{})
 			go func() {
-				err := s.Serve(lis)
+				err = s.Serve(lis)
 				assert.NoError(t, err)
 			}()
 
-			conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			conn, err = grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 			assert.NoError(t, err)
 			defer func(conn *grpc.ClientConn) {
 				err = conn.Close()
 				assert.NoError(t, err)
 			}(conn)
 
-			if tt.ip != "" {
-				md := metadata.Pairs("X-Real-IP", tt.ip)
+			if tt.key != "" && tt.reqHash != "" {
+				hash, err = utils.GetMetricHash(m, tt.key)
+				assert.NoError(t, err)
+				md := metadata.Pairs(utils.HasherHeaderKey, hash)
 				ctx = metadata.NewOutgoingContext(context.Background(), md)
 			} else {
 				ctx = context.Background()
 			}
 
-			client := pb.NewTestClient(conn)
-			_, err = client.SetXRealIP(ctx, &pb.SetXRealIPRequest{IP: tt.ip})
+			client := pb.NewMetricsClient(conn)
+			_, err = client.UpdateMetricTest(ctx, &pb.UpdateMetricRequest{Metric: pbMetric})
 			if tt.wantStatus == codes.OK {
 				assert.NoError(t, err)
 			} else {

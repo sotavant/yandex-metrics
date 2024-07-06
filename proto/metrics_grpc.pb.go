@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	Metrics_UpdateMetric_FullMethodName = "/yandex_metrics.Metrics/UpdateMetric"
+	Metrics_UpdateMetric_FullMethodName     = "/yandex_metrics.Metrics/UpdateMetric"
+	Metrics_UpdateMetricTest_FullMethodName = "/yandex_metrics.Metrics/UpdateMetricTest"
 )
 
 // MetricsClient is the client API for Metrics service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetricsClient interface {
 	UpdateMetric(ctx context.Context, in *UpdateMetricRequest, opts ...grpc.CallOption) (*UpdateMetricResponse, error)
+	UpdateMetricTest(ctx context.Context, in *UpdateMetricRequest, opts ...grpc.CallOption) (*UpdateMetricResponse, error)
 }
 
 type metricsClient struct {
@@ -47,11 +49,22 @@ func (c *metricsClient) UpdateMetric(ctx context.Context, in *UpdateMetricReques
 	return out, nil
 }
 
+func (c *metricsClient) UpdateMetricTest(ctx context.Context, in *UpdateMetricRequest, opts ...grpc.CallOption) (*UpdateMetricResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMetricResponse)
+	err := c.cc.Invoke(ctx, Metrics_UpdateMetricTest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MetricsServer is the server API for Metrics service.
 // All implementations must embed UnimplementedMetricsServer
 // for forward compatibility
 type MetricsServer interface {
 	UpdateMetric(context.Context, *UpdateMetricRequest) (*UpdateMetricResponse, error)
+	UpdateMetricTest(context.Context, *UpdateMetricRequest) (*UpdateMetricResponse, error)
 	mustEmbedUnimplementedMetricsServer()
 }
 
@@ -61,6 +74,9 @@ type UnimplementedMetricsServer struct {
 
 func (UnimplementedMetricsServer) UpdateMetric(context.Context, *UpdateMetricRequest) (*UpdateMetricResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateMetric not implemented")
+}
+func (UnimplementedMetricsServer) UpdateMetricTest(context.Context, *UpdateMetricRequest) (*UpdateMetricResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMetricTest not implemented")
 }
 func (UnimplementedMetricsServer) mustEmbedUnimplementedMetricsServer() {}
 
@@ -93,6 +109,24 @@ func _Metrics_UpdateMetric_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Metrics_UpdateMetricTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMetricRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricsServer).UpdateMetricTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Metrics_UpdateMetricTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricsServer).UpdateMetricTest(ctx, req.(*UpdateMetricRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Metrics_ServiceDesc is the grpc.ServiceDesc for Metrics service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -103,6 +137,10 @@ var Metrics_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateMetric",
 			Handler:    _Metrics_UpdateMetric_Handler,
+		},
+		{
+			MethodName: "UpdateMetricTest",
+			Handler:    _Metrics_UpdateMetricTest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

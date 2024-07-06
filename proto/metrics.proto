@@ -22,4 +22,5 @@ message UpdateMetricResponse {
 
 service Metrics {
   rpc UpdateMetric(UpdateMetricRequest) returns (UpdateMetricResponse);
+  rpc UpdateMetricTest(UpdateMetricRequest) returns (UpdateMetricResponse);
 }
