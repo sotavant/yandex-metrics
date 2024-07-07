@@ -17,6 +17,5 @@ func (m *MetricServer) UpdateMetric(ctx context.Context, req *pb.UpdateMetricReq
 }
 
 func (m *MetricServer) UpdateMetricTest(ctx context.Context, req *pb.UpdateMetricRequest) (*pb.UpdateMetricResponse, error) {
-	fmt.Println(req.Metric)
 	return nil, nil
 }

@@ -3,11 +3,13 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
+	"github.com/sotavant/yandex-metrics/internal/server/metric"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
 )
 
@@ -44,45 +46,10 @@ func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, re
 			return
 		}
 
-		if m.ID == "" {
-			http.Error(res, "id absent", http.StatusBadRequest)
-			return
-		}
-
-		switch m.MType {
-		case internal.GaugeType:
-			if m.Value == nil {
-				http.Error(res, "value absent", http.StatusBadRequest)
-				return
-			}
-
-			err := appInstance.Storage.AddGaugeValue(req.Context(), m.ID, *m.Value)
-			if err != nil {
-				internal.Logger.Infow("error in add value", "err", err)
-				http.Error(res, "internal server error", http.StatusInternalServerError)
-				return
-			}
-		case internal.CounterType:
-			if m.Delta == nil {
-				http.Error(res, "value absent", http.StatusBadRequest)
-				return
-			}
-
-			err := appInstance.Storage.AddCounterValue(req.Context(), m.ID, *m.Delta)
-			if err != nil {
-				internal.Logger.Infow("error in add counter value", "err", err)
-				http.Error(res, "internal server error", http.StatusInternalServerError)
-				return
-			}
-		default:
-			http.Error(res, "bad request", http.StatusBadRequest)
-			return
-		}
-
-		respStruct, err := getMetricsStruct(req.Context(), appInstance.Storage, m)
+		respStruct, err := metric.Upsert(req.Context(), m)
 		if err != nil {
-			internal.Logger.Infow("error in get metric struct", "err", err)
-			http.Error(res, "internal server error", http.StatusInternalServerError)
+			internal.Logger.Infow("upsert error", "err", err)
+			http.Error(res, err.Error(), getStatusCode(err))
 			return
 		}
 
@@ -273,4 +240,14 @@ func getMetricsStruct(ctx context.Context, storage repository.Storage, before in
 	}
 
 	return m, err
+}
+
+func getStatusCode(err error) int {
+	switch {
+	case errors.Is(err, metric.ErrIDAbsent):
+	case errors.Is(err, metric.ErrBadType):
+		return http.StatusBadRequest
+	default:
+		return http.StatusOK
+	}
 }
