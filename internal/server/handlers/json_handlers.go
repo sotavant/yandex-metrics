@@ -2,7 +2,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/metric"
-	"github.com/sotavant/yandex-metrics/internal/server/repository"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -36,7 +34,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 // Ответ:
 //
 //	строка в формате json
-func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, req *http.Request) {
+func UpdateJSONHandler(appInstance *server.App, ms *metric.MetricService) func(res http.ResponseWriter, req *http.Request) {
 	return func(res http.ResponseWriter, req *http.Request) {
 		var m internal.Metrics
 
@@ -46,7 +44,7 @@ func UpdateJSONHandler(appInstance *server.App) func(res http.ResponseWriter, re
 			return
 		}
 
-		respStruct, err := metric.Upsert(req.Context(), m)
+		respStruct, err := ms.Upsert(req.Context(), m)
 		if err != nil {
 			internal.Logger.Infow("upsert error", "err", err)
 			http.Error(res, err.Error(), getStatusCode(err))
@@ -199,7 +197,7 @@ func GetValueJSONHandler(appInstance *server.App) func(res http.ResponseWriter, 
 			return
 		}
 
-		respStruct, err := getMetricsStruct(req.Context(), appInstance.Storage, m)
+		respStruct, err := metric.GetMetricsStruct(req.Context(), appInstance.Storage, m)
 		if err != nil {
 			internal.Logger.Infow("error in getMetricsStruct", "err", err)
 			http.Error(res, "internal server error", http.StatusInternalServerError)
@@ -218,36 +216,13 @@ func GetValueJSONHandler(appInstance *server.App) func(res http.ResponseWriter, 
 	}
 }
 
-func getMetricsStruct(ctx context.Context, storage repository.Storage, before internal.Metrics) (internal.Metrics, error) {
-	var err error
-	var gValue float64
-	var cValue int64
-	m := before
-
-	switch m.MType {
-	case internal.GaugeType:
-		gValue, err = storage.GetGaugeValue(ctx, m.ID)
-		if err != nil {
-			return m, err
-		}
-		m.Value = &gValue
-	case internal.CounterType:
-		cValue, err = storage.GetCounterValue(ctx, m.ID)
-		if err != nil {
-			return m, err
-		}
-		m.Delta = &cValue
-	}
-
-	return m, err
-}
-
 func getStatusCode(err error) int {
 	switch {
-	case errors.Is(err, metric.ErrIDAbsent):
-	case errors.Is(err, metric.ErrBadType):
+	case errors.Is(err, metric.ErrIDAbsent), errors.Is(err, metric.ErrBadType), errors.Is(err, metric.ErrValueAbsent):
 		return http.StatusBadRequest
+	case errors.Is(err, metric.ErrAddGaugeValue), errors.Is(err, metric.ErrAddCounterValue):
+		return http.StatusInternalServerError
 	default:
-		return http.StatusOK
+		return http.StatusInternalServerError
 	}
 }

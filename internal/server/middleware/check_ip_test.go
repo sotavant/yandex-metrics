@@ -13,6 +13,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
+	"github.com/sotavant/yandex-metrics/internal/server/metric"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	pb "github.com/sotavant/yandex-metrics/proto_test"
@@ -87,7 +88,7 @@ func TestIPChecker_CheckIP_Handler(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Use(ipMiddleware.CheckIP)
-			r.Post("/update/", handlers.UpdateJSONHandler(appInstance))
+			r.Post("/update/", handlers.UpdateJSONHandler(appInstance, metric.NewMetricService(st)))
 
 			w := httptest.NewRecorder()
 

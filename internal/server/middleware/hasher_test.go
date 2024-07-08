@@ -13,6 +13,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	grpc2 "github.com/sotavant/yandex-metrics/internal/server/grpc"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
+	"github.com/sotavant/yandex-metrics/internal/server/metric"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/sotavant/yandex-metrics/internal/utils"
@@ -73,7 +74,7 @@ func TestRequestHasherMiddleware(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Use(hasherMiddlware.Handler)
-			r.Post("/update/", handlers.UpdateJSONHandler(appInstance))
+			r.Post("/update/", handlers.UpdateJSONHandler(appInstance, metric.NewMetricService(st)))
 
 			w := httptest.NewRecorder()
 
@@ -173,7 +174,6 @@ func TestHasher_CheckHasInterceptor(t *testing.T) {
 	internal.InitLogger()
 
 	var ctx context.Context
-	var hash string
 	var conn *grpc.ClientConn
 	const hashKey = "hashKey"
 
@@ -248,9 +248,7 @@ func TestHasher_CheckHasInterceptor(t *testing.T) {
 			}(conn)
 
 			if tt.key != "" && tt.reqHash != "" {
-				hash, err = utils.GetMetricHash(m, tt.key)
-				assert.NoError(t, err)
-				md := metadata.Pairs(utils.HasherHeaderKey, hash)
+				md := metadata.Pairs(utils.HasherHeaderKey, tt.reqHash)
 				ctx = metadata.NewOutgoingContext(context.Background(), md)
 			} else {
 				ctx = context.Background()
@@ -261,7 +259,7 @@ func TestHasher_CheckHasInterceptor(t *testing.T) {
 			if tt.wantStatus == codes.OK {
 				assert.NoError(t, err)
 			} else {
-				assert.Equal(t, status.Code(err), tt.wantStatus)
+				assert.Equal(t, tt.wantStatus, status.Code(err))
 			}
 		})
 	}

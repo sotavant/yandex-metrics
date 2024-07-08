@@ -13,7 +13,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
+	grpc2 "github.com/sotavant/yandex-metrics/internal/server/grpc"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
+	"github.com/sotavant/yandex-metrics/internal/server/metric"
 	"github.com/sotavant/yandex-metrics/internal/server/middleware"
 	"github.com/sotavant/yandex-metrics/internal/utils"
 	pb "github.com/sotavant/yandex-metrics/proto"
@@ -105,6 +107,7 @@ func initRouters(app *server.App) *chi.Mux {
 	hasher := middleware.NewHasher(app.Config.HashKey)
 	crypto, err := middleware.NewCrypto(app.Config.CryptoKeyPath)
 	ipChecker := middleware.NewIPChecker(app.Config.TrustedSubnet)
+	metricService := metric.NewMetricService(app.Storage)
 
 	if err != nil {
 		internal.Logger.Fatalw("crypto initialization failed", "error", err)
@@ -121,7 +124,7 @@ func initRouters(app *server.App) *chi.Mux {
 
 	r.Post("/update/{type}/{name}/{value}", handlers.UpdateHandler(app))
 	r.Get("/value/{type}/{name}", handlers.GetValueHandler(app))
-	r.Post("/update/", handlers.UpdateJSONHandler(app))
+	r.Post("/update/", handlers.UpdateJSONHandler(app, metricService))
 	r.Post("/updates/", handlers.UpdateBatchJSONHandler(app))
 	r.Post("/value/", handlers.GetValueJSONHandler(app))
 	r.Get("/", handlers.GetValuesHandler(app))
@@ -153,7 +156,9 @@ func initGRPCServer(app *server.App) *grpc.Server {
 	}
 
 	s := grpc.NewServer(grpc.Creds(ch.GetServerGRPCTransportCreds()), grpc.ChainUnaryInterceptor(interceptors...))
-	pb.RegisterMetricsServer(s, &MetricsServer{})
+	ms := metric.NewMetricService(app.Storage)
+
+	pb.RegisterMetricsServer(s, grpc2.NewMetricServer(ms))
 
 	return s
 }

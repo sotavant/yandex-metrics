@@ -3,20 +3,27 @@ package metric
 import (
 	"context"
 	"errors"
-	"net/http"
 
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server/repository"
-	"golang.org/x/mod/sumdb/storage"
 )
 
 var (
-	ErrIDAbsent = errors.New("ID is absent")
-	ErrBadType  = errors.New("Bad metric type")
+	ErrIDAbsent        = errors.New("ID is absent")
+	ErrBadType         = errors.New("Bad metric type")
+	ErrValueAbsent     = errors.New("Value is absent")
+	ErrAddGaugeValue   = errors.New("error in add gauge value")
+	ErrAddCounterValue = errors.New("error in add counter value")
 )
 
 type MetricService struct {
-	storage *repository.Storage
+	storage repository.Storage
+}
+
+func NewMetricService(st repository.Storage) *MetricService {
+	return &MetricService{
+		storage: st,
+	}
 }
 
 func (ms *MetricService) Upsert(ctx context.Context, m internal.Metrics) (internal.Metrics, error) {
@@ -24,32 +31,52 @@ func (ms *MetricService) Upsert(ctx context.Context, m internal.Metrics) (intern
 		return internal.Metrics{}, ErrIDAbsent
 	}
 
-	if m.MType != internal.GaugeType && m.MType != internal.CounterType {
+	switch m.MType {
+	case internal.GaugeType:
+		if m.Value == nil {
+			return internal.Metrics{}, ErrValueAbsent
+		}
+
+		err := ms.storage.AddGaugeValue(ctx, m.ID, *m.Value)
+		if err != nil {
+			return internal.Metrics{}, ErrAddGaugeValue
+		}
+	case internal.CounterType:
+		if m.Delta == nil {
+			return internal.Metrics{}, ErrValueAbsent
+		}
+
+		err := ms.storage.AddCounterValue(ctx, m.ID, *m.Delta)
+		if err != nil {
+			return internal.Metrics{}, ErrAddCounterValue
+		}
+	default:
 		return internal.Metrics{}, ErrBadType
 	}
 
-	exist, err := ms.storage.KeyExist(req.Context(), m.MType, m.ID)
-	if err != nil {
-		internal.Logger.Infow("error in encode")
-		http.Error(res, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	if !exist {
-		http.Error(res, "not found", http.StatusNotFound)
-		return
-	}
-
-	respStruct, err := ms.getMetricsStruct(req.Context(), appInstance.Storage, m)
-	if err != nil {
-		internal.Logger.Infow("error in getMetricsStruct", "err", err)
-		http.Error(res, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	return m, nil
+	return GetMetricsStruct(ctx, ms.storage, m)
 }
 
-func (ms MetricService) getMetricsStruct(ctx context.Context, s storage.Storage, metric internal.Metrics) (internal.Metrics, error) {
+func GetMetricsStruct(ctx context.Context, storage repository.Storage, before internal.Metrics) (internal.Metrics, error) {
+	var err error
+	var gValue float64
+	var cValue int64
+	m := before
 
+	switch m.MType {
+	case internal.GaugeType:
+		gValue, err = storage.GetGaugeValue(ctx, m.ID)
+		if err != nil {
+			return m, err
+		}
+		m.Value = &gValue
+	case internal.CounterType:
+		cValue, err = storage.GetCounterValue(ctx, m.ID)
+		if err != nil {
+			return m, err
+		}
+		m.Delta = &cValue
+	}
+
+	return m, err
 }

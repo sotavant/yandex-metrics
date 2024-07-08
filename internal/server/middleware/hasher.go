@@ -77,7 +77,7 @@ func (h *Hasher) CheckHashInterceptor(ctx context.Context, req interface{}, info
 				return nil, status.Errorf(codes.Internal, "error in check hash: %v", err)
 			}
 
-			if res == false {
+			if !res {
 				return nil, status.Error(codes.InvalidArgument, "bad hash")
 			}
 

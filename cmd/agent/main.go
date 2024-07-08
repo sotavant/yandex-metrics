@@ -45,7 +45,7 @@ func main() {
 	ms := storage.NewStorage()
 	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath, config.AppConfig.CryptoCertPath)
 	if err != nil {
-		panic(err)
+		internal.Logger.Fatalw("failed to init crypto cipher", "error", err)
 	}
 
 	r, gRPCConn := getReporter(config.AppConfig.UseGRPC, ch)
@@ -53,7 +53,7 @@ func main() {
 		defer func(conn *grpc.ClientConn) {
 			err = conn.Close()
 			if err != nil {
-
+				internal.Logger.Fatalw("failed to close grpc connection", "error", err)
 			}
 		}(gRPCConn)
 	}
