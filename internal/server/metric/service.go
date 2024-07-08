@@ -10,8 +10,8 @@ import (
 
 var (
 	ErrIDAbsent        = errors.New("ID is absent")
-	ErrBadType         = errors.New("Bad metric type")
-	ErrValueAbsent     = errors.New("Value is absent")
+	ErrBadType         = errors.New("bad metric type")
+	ErrValueAbsent     = errors.New("value is absent")
 	ErrAddGaugeValue   = errors.New("error in add gauge value")
 	ErrAddCounterValue = errors.New("error in add counter value")
 )
