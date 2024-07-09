@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -12,8 +13,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/server"
+	grpc2 "github.com/sotavant/yandex-metrics/internal/server/grpc"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
+	"github.com/sotavant/yandex-metrics/internal/server/metric"
 	"github.com/sotavant/yandex-metrics/internal/server/middleware"
+	"github.com/sotavant/yandex-metrics/internal/utils"
+	pb "github.com/sotavant/yandex-metrics/proto"
+	"google.golang.org/grpc"
 )
 
 // Build info.
@@ -27,6 +33,9 @@ var (
 )
 
 func main() {
+	var listen net.Listener
+	var srv http.Server
+	var s *grpc.Server
 	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 	ctx := context.Background()
 	internal.InitLogger()
@@ -36,25 +45,46 @@ func main() {
 		panic(err)
 	}
 
-	r := initRouters(appInstance)
-	srv := http.Server{Addr: appInstance.Config.Addr, Handler: r}
+	if appInstance.Config.UseGRPC {
+		listen, err = net.Listen("tcp", appInstance.Config.Addr)
+		if err != nil {
+			internal.Logger.Fatalw("failed to listen", "err", err)
+		}
+
+		s = initGRPCServer(appInstance)
+	} else {
+		r := initRouters(appInstance)
+		srv = http.Server{Addr: appInstance.Config.Addr, Handler: r}
+	}
+
 	jobsDone := make(chan struct{})
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
 		<-sigint
-		if err = srv.Shutdown(ctx); err != nil {
-			internal.Logger.Infow("shutdown err", "err", err)
+		if appInstance.Config.UseGRPC {
+			s.GracefulStop()
+		} else {
+			if err = srv.Shutdown(ctx); err != nil {
+				internal.Logger.Infow("shutdown err", "err", err)
+			}
 		}
+
 		appInstance.SyncFs(ctx)
 		close(jobsDone)
 		internal.Logger.Infow("shutdown complete")
 	}()
 
 	go func() {
-		if err = srv.ListenAndServe(); err != nil && !errors.Is(http.ErrServerClosed, err) {
-			internal.Logger.Infow("http server err", "err", err)
+		if appInstance.Config.UseGRPC {
+			if err = s.Serve(listen); err != nil {
+				internal.Logger.Fatalw("failed to grpc serve", "err", err)
+			}
+		} else {
+			if err = srv.ListenAndServe(); err != nil && !errors.Is(http.ErrServerClosed, err) {
+				internal.Logger.Infow("http server err", "err", err)
+			}
 		}
 	}()
 
@@ -76,8 +106,15 @@ func initRouters(app *server.App) *chi.Mux {
 
 	hasher := middleware.NewHasher(app.Config.HashKey)
 	crypto, err := middleware.NewCrypto(app.Config.CryptoKeyPath)
+	ipChecker := middleware.NewIPChecker(app.Config.TrustedSubnet)
+	metricService := metric.NewMetricService(app.Storage)
+
 	if err != nil {
 		internal.Logger.Fatalw("crypto initialization failed", "error", err)
+	}
+
+	if ipChecker != nil {
+		r.Use(ipChecker.CheckIP)
 	}
 
 	r.Use(crypto.Handler)
@@ -87,7 +124,7 @@ func initRouters(app *server.App) *chi.Mux {
 
 	r.Post("/update/{type}/{name}/{value}", handlers.UpdateHandler(app))
 	r.Get("/value/{type}/{name}", handlers.GetValueHandler(app))
-	r.Post("/update/", handlers.UpdateJSONHandler(app))
+	r.Post("/update/", handlers.UpdateJSONHandler(app, metricService))
 	r.Post("/updates/", handlers.UpdateBatchJSONHandler(app))
 	r.Post("/value/", handlers.GetValueJSONHandler(app))
 	r.Get("/", handlers.GetValuesHandler(app))
@@ -101,4 +138,27 @@ func initRouters(app *server.App) *chi.Mux {
 func initProfiling(r *chi.Mux) {
 	r.HandleFunc("/pprof/*", pprof.Index)
 	r.Handle("/pprof/heap", pprof.Handler("heap"))
+}
+
+func initGRPCServer(app *server.App) *grpc.Server {
+	var ch *utils.Cipher
+	var err error
+	var interceptors []grpc.UnaryServerInterceptor
+
+	ch, err = utils.NewCipher(app.Config.CryptoKeyPath, "", app.Config.CryptoCertPath)
+	if err != nil {
+		internal.Logger.Fatalw("error initializing cipher", "err", err)
+	}
+
+	if app.Config.TrustedSubnet != "" {
+		ipChecker := middleware.NewIPChecker(app.Config.TrustedSubnet)
+		interceptors = append(interceptors, ipChecker.CheckIPInterceptor)
+	}
+
+	s := grpc.NewServer(grpc.Creds(ch.GetServerGRPCTransportCreds()), grpc.ChainUnaryInterceptor(interceptors...))
+	ms := metric.NewMetricService(app.Storage)
+
+	pb.RegisterMetricsServer(s, grpc2.NewMetricServer(ms))
+
+	return s
 }

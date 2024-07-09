@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
+	"github.com/sotavant/yandex-metrics/internal/server/metric"
 	"github.com/sotavant/yandex-metrics/internal/server/middleware"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/postgres"
@@ -41,7 +42,9 @@ func Test_updateJsonHandler(t *testing.T) {
 		Fs:      fs,
 	}
 
-	handler := UpdateJSONHandler(appInstance)
+	ms := metric.NewMetricService(st)
+
+	handler := UpdateJSONHandler(appInstance, ms)
 
 	type want struct {
 		body   string
@@ -456,7 +459,7 @@ func ExampleUpdateJSONHandler() {
 		Storage: st,
 	}
 
-	handler := UpdateJSONHandler(appInstance)
+	handler := UpdateJSONHandler(appInstance, metric.NewMetricService(st))
 
 	request := httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"id":"ss","type":"gauge","value":-33.345345}`))
 	w := httptest.NewRecorder()

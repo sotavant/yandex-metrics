@@ -26,6 +26,7 @@ func main() {
 		SerialNumber: big.NewInt(certNum),
 		// заполняем базовую информацию о владельце сертификата
 		Subject: pkix.Name{
+			CommonName:   "localhost",
 			Organization: []string{"Yandex.Praktikum"},
 			Country:      []string{"RU"},
 		},

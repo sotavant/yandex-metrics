@@ -12,6 +12,7 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/server"
 	"github.com/sotavant/yandex-metrics/internal/server/config"
 	"github.com/sotavant/yandex-metrics/internal/server/handlers"
+	"github.com/sotavant/yandex-metrics/internal/server/metric"
 	"github.com/sotavant/yandex-metrics/internal/server/repository/memory"
 	"github.com/sotavant/yandex-metrics/internal/server/storage"
 	"github.com/sotavant/yandex-metrics/internal/utils"
@@ -43,7 +44,7 @@ func TestCrypto_Handler(t *testing.T) {
 	fs, err := storage.NewFileStorage(conf.FileStoragePath, conf.Restore, conf.StoreInterval)
 	assert.NoError(t, err)
 
-	ch, err := utils.NewCipher(privateKeyPath, publicKeyPath)
+	ch, err := utils.NewCipher(privateKeyPath, publicKeyPath, "")
 	assert.NoError(t, err)
 
 	encryptedText, err := ch.Encrypt([]byte(requestBody))
@@ -79,7 +80,7 @@ func TestCrypto_Handler(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Use(cryptoMiddlware.Handler)
-			r.Post("/update/", handlers.UpdateJSONHandler(appInstance))
+			r.Post("/update/", handlers.UpdateJSONHandler(appInstance, metric.NewMetricService(st)))
 
 			w := httptest.NewRecorder()
 

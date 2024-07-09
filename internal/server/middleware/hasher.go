@@ -3,12 +3,18 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/sotavant/yandex-metrics/internal"
 	"github.com/sotavant/yandex-metrics/internal/utils"
+	pb "github.com/sotavant/yandex-metrics/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // Hasher содержит ключ шифрования
@@ -54,6 +60,51 @@ func (h *Hasher) Handler(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(f)
+}
+
+func (h *Hasher) CheckHashInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	if h.key == "" {
+		return handler(ctx, req)
+	}
+
+	var res bool
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		hashes := md[strings.ToLower(utils.HasherHeaderKey)]
+		if len(hashes) > 0 {
+			res, err = h.checkHashForGRPC(hashes[0], req)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "error in check hash: %v", err)
+			}
+
+			if !res {
+				return nil, status.Error(codes.InvalidArgument, "bad hash")
+			}
+
+			return handler(ctx, req)
+		}
+
+		return nil, status.Errorf(codes.InvalidArgument, "empty hash")
+	} else {
+		return nil, status.Errorf(codes.Internal, "error getting metadata")
+	}
+}
+
+func (h *Hasher) checkHashForGRPC(hash string, req interface{}) (bool, error) {
+	reqMetric := req.(*pb.UpdateMetricRequest)
+	m := internal.Metrics{
+		Value: &reqMetric.Metric.Value,
+		Delta: &reqMetric.Metric.Delta,
+		ID:    reqMetric.Metric.ID,
+		MType: reqMetric.Metric.MType,
+	}
+
+	reqHash, err := utils.GetMetricHash(m, h.key)
+	if err != nil {
+		return false, err
+	}
+
+	return reqHash == hash, nil
 }
 
 func (h *Hasher) checkHash(reqHash string, r *http.Request) (bool, error) {

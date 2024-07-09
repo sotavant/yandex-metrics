@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -13,6 +12,8 @@ import (
 	"github.com/sotavant/yandex-metrics/internal/agent/config"
 	"github.com/sotavant/yandex-metrics/internal/agent/storage"
 	"github.com/sotavant/yandex-metrics/internal/utils"
+	pb "github.com/sotavant/yandex-metrics/proto"
+	"google.golang.org/grpc"
 )
 
 // Build info.
@@ -24,6 +25,10 @@ var (
 	buildDate    string
 	buildCommit  string
 )
+
+type Reporter interface {
+	ReportMetric(ms *storage.MetricsStorage, workersCount int, signs chan os.Signal) bool
+}
 
 func main() {
 	internal.PrintBuildInfo(buildVersion, buildDate, buildCommit)
@@ -38,17 +43,25 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	ms := storage.NewStorage()
-	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath)
+	ch, err := utils.NewCipher("", config.AppConfig.CryptoKeyPath, config.AppConfig.CryptoCertPath)
 	if err != nil {
-		panic(err)
+		internal.Logger.Fatalw("failed to init crypto cipher", "error", err)
 	}
 
-	r := client.NewReporter(ch)
+	r, gRPCConn := getReporter(config.AppConfig.UseGRPC, ch)
+	if gRPCConn != nil {
+		defer func(conn *grpc.ClientConn) {
+			err = conn.Close()
+			if err != nil {
+				internal.Logger.Fatalw("failed to close grpc connection", "error", err)
+			}
+		}(gRPCConn)
+	}
 
 	updateValuesChan := make(chan bool)
 	reportMetricsChan := make(chan bool)
 	updateAddValuesChan := make(chan bool)
-	pprofChan := make(chan bool)
+	/*pprofChan := make(chan bool)
 
 	go func() {
 		err = http.ListenAndServe(":8082", nil)
@@ -57,7 +70,7 @@ func main() {
 			close(pprofChan)
 			panic(err)
 		}
-	}()
+	}()*/
 
 	go func() {
 		for {
@@ -92,7 +105,7 @@ func main() {
 				<-time.After(reportIntervalDuration)
 				shutdown := r.ReportMetric(ms, config.AppConfig.RateLimit, sigs)
 				if shutdown {
-					close(pprofChan)
+					//close(pprofChan)
 					close(updateAddValuesChan)
 					close(updateValuesChan)
 					close(reportMetricsChan)
@@ -104,5 +117,19 @@ func main() {
 	<-reportMetricsChan
 	<-updateValuesChan
 	<-updateAddValuesChan
-	<-pprofChan
+	//<-pprofChan
+}
+
+func getReporter(useGRPC bool, cipher *utils.Cipher) (Reporter, *grpc.ClientConn) {
+	if !useGRPC {
+		return client.NewReporter(cipher), nil
+	}
+
+	conn, err := grpc.NewClient(config.AppConfig.Addr, grpc.WithTransportCredentials(cipher.GetClientGRPCTransportCreds()))
+	if err != nil {
+		internal.Logger.Fatalw("failed to create grpc client", "error", err)
+	}
+
+	c := pb.NewMetricsClient(conn)
+	return client.NewGRPCReporter(c), conn
 }
